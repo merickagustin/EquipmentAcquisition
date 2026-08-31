@@ -17,6 +17,6 @@ public class ReportsController : ControllerBase
 
     [HttpGet("department-spend")]
     public async Task<ActionResult<List<ReportRowDto>>> GetDepartmentSpend(
-        [FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] int? departmentId = null) =>
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int? departmentId = null) =>
         Ok(await _service.GetDepartmentSpendAsync(from, to, departmentId));
 }

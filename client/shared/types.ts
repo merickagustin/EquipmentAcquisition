@@ -191,6 +191,59 @@ export interface UpdatePurchaseOrderDto {
   unitCost: number;
 }
 
+// Mirrors EquipmentAcquisition.Domain.Enums.AssetStatus.
+export const AssetStatus = { InStock: 0, Assigned: 1, Maintenance: 2, Retired: 3 } as const;
+export type AssetStatusValue = 0 | 1 | 2 | 3;
+
+export const assetStatusLabel: Record<AssetStatusValue, string> = {
+  0: 'In Stock',
+  1: 'Assigned',
+  2: 'Maintenance',
+  3: 'Retired',
+};
+
+// Mirrors EquipmentAcquisition.Core.Dtos.AssetDto and friends.
+export interface AssetDto {
+  id: number;
+  purchaseOrderId: number;
+  departmentId: number;
+  assetTag: string;
+  serialNumber: string | null;
+  status: AssetStatusValue;
+  acquiredDate: string;
+  lastUpdated: string;
+}
+
+export interface CreateAssetDto {
+  purchaseOrderId: number;
+  departmentId: number;
+  assetTag: string;
+  serialNumber: string | null;
+  status: AssetStatusValue;
+}
+
+export interface UpdateAssetDto {
+  departmentId: number;
+  status: AssetStatusValue;
+}
+
+// Mirrors EquipmentAcquisition.Core.Dtos.AssetListQuery — all filters optional.
+export interface AssetListQuery {
+  departmentId?: number;
+  purchaseOrderId?: number;
+  status?: AssetStatusValue;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
+// Mirrors EquipmentAcquisition.Core.Dtos.ReportRowDto.
+export interface ReportRowDto {
+  departmentName: string;
+  categoryName: string;
+  requestCount: number;
+  totalSpend: number;
+}
+
 // Mirrors the { status, detail } shape ExceptionHandlingMiddleware writes for
 // 400/404/409 — see EquipmentAcquisition.Api/Middleware/ExceptionHandlingMiddleware.cs.
 export interface ApiProblem {

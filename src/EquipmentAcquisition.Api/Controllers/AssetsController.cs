@@ -18,6 +18,12 @@ public class AssetsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<AssetDto>>> GetAll() => Ok(await _service.GetAllAsync());
 
+    // Paginated/filterable — what the Asset Registry page actually uses. GetAll above
+    // stays for API completeness/Swagger exploration, same split as AcquisitionRequests.
+    [HttpGet("grid")]
+    public async Task<ActionResult<PagedResult<AssetDto>>> GetGrid([FromQuery] AssetListQuery query) =>
+        Ok(await _service.GetPagedAsync(query));
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<AssetDto>> GetById(int id) => Ok(await _service.GetByIdAsync(id));
 

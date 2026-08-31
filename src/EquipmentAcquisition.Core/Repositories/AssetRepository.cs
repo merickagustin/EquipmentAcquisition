@@ -1,4 +1,5 @@
 using EquipmentAcquisition.Core.Data;
+using EquipmentAcquisition.Core.Dtos;
 using EquipmentAcquisition.Core.Repositories.Interfaces;
 using EquipmentAcquisition.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,29 @@ public class AssetRepository : IAssetRepository
 
     public Task<List<Asset>> GetAllAsync() =>
         _context.Assets.AsNoTracking().OrderByDescending(a => a.AcquiredDate).ToListAsync();
+
+    public async Task<(List<Asset> Items, int TotalCount)> GetPagedAsync(AssetListQuery query)
+    {
+        // Filters appended only when actually supplied — same reasoning as
+        // DetailCacheRepository: never a catch-all `(@Param IS NULL OR Col = @Param)`.
+        var filtered = _context.Assets.AsNoTracking().AsQueryable();
+        if (query.DepartmentId is not null)
+            filtered = filtered.Where(a => a.DepartmentId == query.DepartmentId);
+        if (query.PurchaseOrderId is not null)
+            filtered = filtered.Where(a => a.PurchaseOrderId == query.PurchaseOrderId);
+        if (query.Status is not null)
+            filtered = filtered.Where(a => a.Status == query.Status);
+
+        var totalCount = await filtered.CountAsync();
+        var items = await filtered
+            .OrderByDescending(a => a.AcquiredDate)
+            .ThenBy(a => a.Id)
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
 
     public Task<Asset?> GetByIdAsync(int id) =>
         _context.Assets.FirstOrDefaultAsync(a => a.Id == id);

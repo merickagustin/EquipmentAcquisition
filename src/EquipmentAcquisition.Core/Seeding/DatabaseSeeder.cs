@@ -141,18 +141,19 @@ public class DatabaseSeeder
 
     // Hand-authored, not Bogus — thirteen rows, two levels deep. See table-design.md's
     // "Seed — five top-level menus." Active only where a shell page actually exists
-    // (Home, Acquisitions > Requests, Menu Admin, Vendors, Departments, Equipment
-    // Categories) — the rest stay inactive so a reviewer never lands on a 404 from
-    // the nav. "Purchase Orders" has no page of its own: creating/editing a PO is a
-    // per-row action on an Approved request in Requests, not a standalone flat list —
-    // PurchaseOrders has 1:0-or-1 rows per request (unique FK) and ~15k total, so
-    // browsing it directly would mean an unbounded fetch with no natural entry point.
+    // (Home, Acquisitions > Requests, Assets > Asset Registry, Reports > Department
+    // Spend, Menu Admin, Vendors, Departments, Equipment Categories) — the rest stay
+    // inactive so a reviewer never lands on a 404 from the nav. "Purchase Orders" has
+    // no page of its own: creating/editing a PO is a per-row action on an Approved
+    // request in Requests, not a standalone flat list — PurchaseOrders has 1:0-or-1
+    // rows per request (unique FK) and ~15k total, so browsing it directly would mean
+    // an unbounded fetch with no natural entry point.
     private async Task<int> SeedMenuItemsAsync()
     {
         var home = new MenuItem { Label = "Home", Route = "/", DisplayOrder = 1, IsActive = true };
         var acquisitions = new MenuItem { Label = "Acquisitions", Route = null, DisplayOrder = 2, IsActive = true };
-        var assets = new MenuItem { Label = "Assets", Route = null, DisplayOrder = 3, IsActive = false };
-        var reports = new MenuItem { Label = "Reports", Route = null, DisplayOrder = 4, IsActive = false };
+        var assets = new MenuItem { Label = "Assets", Route = null, DisplayOrder = 3, IsActive = true };
+        var reports = new MenuItem { Label = "Reports", Route = null, DisplayOrder = 4, IsActive = true };
         var administration = new MenuItem { Label = "Administration", Route = null, DisplayOrder = 5, IsActive = true };
 
         var topLevel = new[] { home, acquisitions, assets, reports, administration };
@@ -163,8 +164,8 @@ public class DatabaseSeeder
         {
             new MenuItem { ParentId = acquisitions.Id, Label = "Requests", Route = "/requests", DisplayOrder = 1, IsActive = true },
             new MenuItem { ParentId = acquisitions.Id, Label = "Purchase Orders", Route = "/purchase-orders", DisplayOrder = 2, IsActive = false },
-            new MenuItem { ParentId = assets.Id, Label = "Asset Registry", Route = "/assets", DisplayOrder = 1, IsActive = false },
-            new MenuItem { ParentId = reports.Id, Label = "Department Spend", Route = "/reports/department-spend", DisplayOrder = 1, IsActive = false },
+            new MenuItem { ParentId = assets.Id, Label = "Asset Registry", Route = "/assets", DisplayOrder = 1, IsActive = true },
+            new MenuItem { ParentId = reports.Id, Label = "Department Spend", Route = "/reports/department-spend", DisplayOrder = 1, IsActive = true },
             new MenuItem { ParentId = administration.Id, Label = "Menu Admin", Route = "/menu-admin", DisplayOrder = 1, IsActive = true },
             new MenuItem { ParentId = administration.Id, Label = "Vendors", Route = "/vendors", DisplayOrder = 2, IsActive = true },
             new MenuItem { ParentId = administration.Id, Label = "Departments", Route = "/departments", DisplayOrder = 3, IsActive = true },
@@ -180,6 +181,11 @@ public class DatabaseSeeder
     // High-volume tables — generated in memory with explicit sequential
     // ids, bulk-copied. See table-design.md's "Seeding strategy."
     // ===================================================================
+
+    // Every generated date below is requestDate/orderDate + a positive random offset, with
+    // requestDate itself allowed up to UtcNow — unclamped, that reliably produces some rows
+    // "approved"/"ordered"/"acquired" in the future relative to whoever runs the demo.
+    private static DateTime MinDate(DateTime a, DateTime b) => a < b ? a : b;
 
     private static List<AcquisitionRequest> GenerateAcquisitionRequests(
         List<Department> departments, List<EquipmentCategory> categories, List<Employee> employees)
@@ -212,15 +218,17 @@ public class DatabaseSeeder
 
             // 60% Approved / 15% Rejected / 25% Pending — CK_AcquisitionRequest_MutuallyExclusiveDates
             // is satisfied by construction: exactly one branch sets a date, or neither.
+            // Clamped to UtcNow — requestDate can itself be as recent as "now", and an
+            // unclamped +30 days would make some requests "approved" in the future.
             var roll = faker.Random.Double();
             if (roll < 0.60)
             {
-                request.ApprovedDate = requestDate.AddDays(faker.Random.Int(1, 30));
+                request.ApprovedDate = MinDate(requestDate.AddDays(faker.Random.Int(1, 30)), DateTime.UtcNow);
                 request.ApprovedByEmployeeId = faker.PickRandom(employees).Id;
             }
             else if (roll < 0.75)
             {
-                request.RejectedDate = requestDate.AddDays(faker.Random.Int(1, 30));
+                request.RejectedDate = MinDate(requestDate.AddDays(faker.Random.Int(1, 30)), DateTime.UtcNow);
                 request.RejectionReason = faker.Lorem.Sentence();
             }
 
@@ -239,7 +247,7 @@ public class DatabaseSeeder
         foreach (var request in approvedRequests)
         {
             var unitCost = Math.Round(request.EstimatedCost / request.Quantity, 2);
-            var orderDate = request.ApprovedDate!.Value.AddDays(faker.Random.Int(1, 14));
+            var orderDate = MinDate(request.ApprovedDate!.Value.AddDays(faker.Random.Int(1, 14)), DateTime.UtcNow);
 
             purchaseOrders.Add(new PurchaseOrder
             {
@@ -271,7 +279,7 @@ public class DatabaseSeeder
             // One Asset row per physical unit — PurchaseOrder.Quantity can cover a bulk buy.
             for (var unit = 0; unit < po.Quantity; unit++)
             {
-                var acquiredDate = po.OrderDate.AddDays(faker.Random.Int(1, 14));
+                var acquiredDate = MinDate(po.OrderDate.AddDays(faker.Random.Int(1, 14)), DateTime.UtcNow);
                 assets.Add(new Asset
                 {
                     Id = id,

@@ -1,0 +1,11 @@
+@page "/assets"
+@model EquipmentAcquisition.Web.Pages.AssetsModel
+@{
+    ViewData["Title"] = "Asset Registry";
+}
+
+@* content-root is filled by the assets-admin React bundle — nothing server-rendered here. *@
+
+@section Scripts {
+    <script src="~/dist/assets-admin/app.js"></script>
+}

@@ -10,6 +10,8 @@ module.exports = {
     'departments-admin': './departments-admin/index.tsx',
     'equipment-categories-admin': './equipment-categories-admin/index.tsx',
     'requests-admin': './requests-admin/index.tsx',
+    'assets-admin': './assets-admin/index.tsx',
+    'reports-admin': './reports-admin/index.tsx',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

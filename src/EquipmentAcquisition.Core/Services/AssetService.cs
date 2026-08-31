@@ -24,6 +24,12 @@ public class AssetService : IAssetService
     public async Task<List<AssetDto>> GetAllAsync() =>
         (await _assets.GetAllAsync()).Select(ToDto).ToList();
 
+    public async Task<PagedResult<AssetDto>> GetPagedAsync(AssetListQuery query)
+    {
+        var (items, totalCount) = await _assets.GetPagedAsync(query);
+        return new PagedResult<AssetDto>(items.Select(ToDto).ToList(), totalCount, query.PageNumber, query.PageSize);
+    }
+
     public async Task<AssetDto> GetByIdAsync(int id) =>
         ToDto(await GetOrThrowAsync(id));
 

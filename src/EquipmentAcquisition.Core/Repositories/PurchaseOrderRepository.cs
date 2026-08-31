@@ -42,7 +42,7 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
     }
 
     public Task<AcquisitionRequest?> GetRequestAsync(int acquisitionRequestId) =>
-        _context.AcquisitionRequests.FirstOrDefaultAsync(r => r.Id == acquisitionRequestId);
+        _context.AcquisitionRequests.FirstOrDefaultAsync(r => r.Id == acquisitionRequestId && !r.IsDeleted);
 
     public Task<bool> VendorExistsAsync(int vendorId) =>
         _context.Vendors.AnyAsync(v => v.Id == vendorId);

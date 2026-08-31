@@ -107,7 +107,7 @@ public class AcquisitionRequestServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_WithoutPurchaseOrder_Deletes_AndEnqueuesRefreshForCleanup()
+    public async Task DeleteAsync_WithoutPurchaseOrder_SoftDeletes_AndEnqueuesRefresh()
     {
         var request = PendingRequest();
         _repository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(request);
@@ -115,8 +115,20 @@ public class AcquisitionRequestServiceTests
 
         await _sut.DeleteAsync(1);
 
-        _repository.Verify(r => r.DeleteAsync(request), Times.Once);
-        // Enqueued even on delete — the refresh proc's DELETE+no-INSERT cleanly removes the orphan cache row.
+        Assert.True(request.IsDeleted);
+        _repository.Verify(r => r.UpdateAsync(request), Times.Once);
+        // Enqueued even on delete — the refresh proc re-materializes the row into the cache
+        // with IsDeleted = 1, and DetailCacheRepository filters it out at read time.
         _cacheRefreshQueue.Verify(q => q.EnqueueForRequestAsync(1), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenAlreadyDeleted_ThrowsNotFoundException()
+    {
+        // GetByIdAsync is IsDeleted-filtered at the repository level, so a second delete
+        // (or any operation) against an already-deleted id sees it as gone, not present.
+        _repository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((AcquisitionRequest?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.DeleteAsync(1));
     }
 }

@@ -17,6 +17,7 @@ public class AcquisitionRequest
     public DateTime? RejectedDate { get; set; }
     public int? ApprovedByEmployeeId { get; set; }
     public string? RejectionReason { get; set; }
+    public bool IsDeleted { get; set; }
 
     public Department Department { get; set; } = null!;
     public EquipmentCategory EquipmentCategory { get; set; } = null!;

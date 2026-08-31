@@ -119,6 +119,10 @@ public class AcquisitionRequestService : IAcquisitionRequestService
         return ToDto(request);
     }
 
+    // Soft delete, not a physical row removal — a request is business history (it may
+    // have been approved/rejected already, and its audit trail should keep meaning).
+    // IsDeleted flips to true; GetByIdAsync/GetAllAsync filter it out everywhere else,
+    // so the rest of the app sees exactly the same "gone" behavior as a real delete.
     public async Task DeleteAsync(int id)
     {
         var request = await GetOrThrowAsync(id);
@@ -127,13 +131,14 @@ public class AcquisitionRequestService : IAcquisitionRequestService
             throw new ConflictException($"AcquisitionRequest {id} has a purchase order and cannot be deleted.");
 
         var oldValues = Serialize(request);
-        await _requests.DeleteAsync(request);
+        request.IsDeleted = true;
+        await _requests.UpdateAsync(request);
 
-        await _auditTrail.AddAsync(TableName, id, AuditAction.Delete, oldValues, null);
+        await _auditTrail.AddAsync(TableName, id, AuditAction.Delete, oldValues, Serialize(request));
 
-        // Enqueue even on delete: the refresh proc's DELETE removes the stale cache row, and its
-        // INSERT...SELECT finds nothing (the request is gone) — net effect is a clean removal,
-        // rather than leaving an orphan row until the next full rebuild.
+        // Enqueue even on delete: the refresh proc re-materializes this row into the cache
+        // with IsDeleted = 1, and DetailCacheRepository filters those out — same practical
+        // effect as the old hard-delete cleanup, but the row (and its history) still exists.
         await _cacheRefreshQueue.EnqueueForRequestAsync(id);
     }
 
@@ -143,7 +148,8 @@ public class AcquisitionRequestService : IAcquisitionRequestService
     private static string Serialize(AcquisitionRequest r) => JsonSerializer.Serialize(new
     {
         r.DepartmentId, r.EquipmentCategoryId, r.RequestedByEmployeeId, r.ItemDescription, r.Justification,
-        r.Quantity, r.EstimatedCost, r.RequestDate, r.ApprovedDate, r.RejectedDate, r.ApprovedByEmployeeId, r.RejectionReason
+        r.Quantity, r.EstimatedCost, r.RequestDate, r.ApprovedDate, r.RejectedDate, r.ApprovedByEmployeeId,
+        r.RejectionReason, r.IsDeleted
     });
 
     private static AcquisitionRequestDto ToDto(AcquisitionRequest r) => new(

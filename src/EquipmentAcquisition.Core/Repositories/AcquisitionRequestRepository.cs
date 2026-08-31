@@ -14,11 +14,14 @@ public class AcquisitionRequestRepository : IAcquisitionRequestRepository
         _context = context;
     }
 
+    // IsDeleted-filtered — a soft-deleted request behaves as "doesn't exist" for
+    // every normal caller (list, GetById, edit, approve, reject). See
+    // AcquisitionRequestService.DeleteAsync for where the flag actually gets set.
     public Task<List<AcquisitionRequest>> GetAllAsync() =>
-        _context.AcquisitionRequests.AsNoTracking().OrderByDescending(r => r.RequestDate).ToListAsync();
+        _context.AcquisitionRequests.AsNoTracking().Where(r => !r.IsDeleted).OrderByDescending(r => r.RequestDate).ToListAsync();
 
     public Task<AcquisitionRequest?> GetByIdAsync(int id) =>
-        _context.AcquisitionRequests.FirstOrDefaultAsync(r => r.Id == id);
+        _context.AcquisitionRequests.FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
 
     public async Task<AcquisitionRequest> AddAsync(AcquisitionRequest request)
     {
@@ -28,12 +31,6 @@ public class AcquisitionRequestRepository : IAcquisitionRequestRepository
     }
 
     public Task UpdateAsync(AcquisitionRequest request) => _context.SaveChangesAsync();
-
-    public async Task DeleteAsync(AcquisitionRequest request)
-    {
-        _context.AcquisitionRequests.Remove(request);
-        await _context.SaveChangesAsync();
-    }
 
     public Task<bool> DepartmentExistsAsync(int departmentId) =>
         _context.Departments.AnyAsync(d => d.Id == departmentId);

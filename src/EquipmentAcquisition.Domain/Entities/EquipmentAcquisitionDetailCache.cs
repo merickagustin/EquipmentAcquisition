@@ -41,4 +41,9 @@ public class EquipmentAcquisitionDetailCache
     public DateTime? OrderDate { get; set; }
 
     public DateTime RefreshedAt { get; set; }
+
+    /// <summary>Mirrors AcquisitionRequest.IsDeleted — soft-deleted requests are still
+    /// materialized here (not omitted), so DetailCacheRepository filters them out at
+    /// read time rather than the refresh path deciding what "deleted" means.</summary>
+    public bool IsDeleted { get; set; }
 }

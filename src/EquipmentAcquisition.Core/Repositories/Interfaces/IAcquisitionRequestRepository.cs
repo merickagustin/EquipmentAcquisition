@@ -8,7 +8,6 @@ public interface IAcquisitionRequestRepository
     Task<AcquisitionRequest?> GetByIdAsync(int id);
     Task<AcquisitionRequest> AddAsync(AcquisitionRequest request);
     Task UpdateAsync(AcquisitionRequest request);
-    Task DeleteAsync(AcquisitionRequest request);
     Task<bool> DepartmentExistsAsync(int departmentId);
     Task<bool> EquipmentCategoryExistsAsync(int categoryId);
     Task<bool> EmployeeExistsAsync(int employeeId);

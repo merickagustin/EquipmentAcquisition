@@ -25,8 +25,11 @@ public class DetailCacheRepository : IDetailCacheRepository
         // (DepartmentId, Status, RequestDate) index. Optional filters appended only when
         // actually supplied — never a catch-all `(@Param IS NULL OR Col = @Param)`, which
         // would defeat the index for every request regardless of what's actually filtered.
+        // !IsDeleted is unconditional, not one of the optional filters above it —
+        // a soft-deleted request never shows in the grid, there's no toggle for it.
         var filtered = _context.Set<CacheEntity>().AsNoTracking()
-            .Where(c => c.DepartmentId == query.DepartmentId
+            .Where(c => !c.IsDeleted
+                     && c.DepartmentId == query.DepartmentId
                      && c.Status == query.Status
                      && c.RequestDate >= query.From && c.RequestDate <= query.To);
 

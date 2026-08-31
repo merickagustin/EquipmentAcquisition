@@ -28,6 +28,7 @@ const emptyForm: CreateDepartmentDto = { code: '', name: '' };
 export function DepartmentsAdminApp() {
   const [items, setItems] = useState<DepartmentDto[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -40,13 +41,15 @@ export function DepartmentsAdminApp() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = () => {
+    setLoading(true);
     apiClient
       .get<DepartmentDto[]>('/api/departments')
       .then((data) => {
         setItems(data);
         setLoadError(null);
       })
-      .catch((e: Error) => setLoadError(e.message));
+      .catch((e: Error) => setLoadError(e.message))
+      .finally(() => setLoading(false));
   };
 
   useEffect(load, []);
@@ -126,20 +129,28 @@ export function DepartmentsAdminApp() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.code}</TableCell>
-                <TableCell>{item.name}</TableCell>
-                <TableCell align="right">
-                  <IconButton size="small" onClick={() => openEdit(item)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(item)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={3} align="center">
+                  <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
-            ))}
+            )}
+            {!loading &&
+              items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{item.code}</TableCell>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell align="right">
+                    <IconButton size="small" onClick={() => openEdit(item)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => setDeleteTarget(item)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </TableContainer>

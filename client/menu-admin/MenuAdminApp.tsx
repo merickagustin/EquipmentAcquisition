@@ -33,6 +33,7 @@ const emptyForm: CreateMenuItemDto = { parentId: null, label: '', route: '', dis
 export function MenuAdminApp() {
   const [items, setItems] = useState<MenuItemDto[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -45,13 +46,15 @@ export function MenuAdminApp() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = () => {
+    setLoading(true);
     apiClient
       .get<MenuItemDto[]>('/api/menu-items')
       .then((data) => {
         setItems(data);
         setLoadError(null);
       })
-      .catch((e: Error) => setLoadError(e.message));
+      .catch((e: Error) => setLoadError(e.message))
+      .finally(() => setLoading(false));
   };
 
   useEffect(load, []);
@@ -161,24 +164,32 @@ export function MenuAdminApp() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell sx={{ pl: 2 + row.depth * 3 }}>{row.label}</TableCell>
-                <TableCell>{row.route ?? <em>— group —</em>}</TableCell>
-                <TableCell align="right">{row.displayOrder}</TableCell>
-                <TableCell align="center">
-                  <Switch checked={row.isActive} onChange={() => toggleActive(row)} size="small" />
-                </TableCell>
-                <TableCell align="right">
-                  <IconButton size="small" onClick={() => openEdit(row)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(row)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={5} align="center">
+                  <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
-            ))}
+            )}
+            {!loading &&
+              rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell sx={{ pl: 2 + row.depth * 3 }}>{row.label}</TableCell>
+                  <TableCell>{row.route ?? <em>— group —</em>}</TableCell>
+                  <TableCell align="right">{row.displayOrder}</TableCell>
+                  <TableCell align="center">
+                    <Switch checked={row.isActive} onChange={() => toggleActive(row)} size="small" />
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton size="small" onClick={() => openEdit(row)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => setDeleteTarget(row)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </TableContainer>

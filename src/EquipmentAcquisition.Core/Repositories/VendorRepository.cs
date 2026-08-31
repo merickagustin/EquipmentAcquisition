@@ -35,6 +35,10 @@ public class VendorRepository : IVendorRepository
         await _context.SaveChangesAsync();
     }
 
+    // IgnoreQueryFilters — a soft-deleted PurchaseOrder row still physically references
+    // this Vendor (its FK doesn't go away), and the DB's Restrict constraint enforces
+    // that regardless of IsDeleted. Filtering here would let this check pass, then crash
+    // on the actual DELETE with a raw FK violation instead of this clean 409.
     public Task<bool> HasPurchaseOrdersAsync(int vendorId) =>
-        _context.PurchaseOrders.AnyAsync(po => po.VendorId == vendorId);
+        _context.PurchaseOrders.IgnoreQueryFilters().AnyAsync(po => po.VendorId == vendorId);
 }

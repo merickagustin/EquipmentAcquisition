@@ -66,16 +66,18 @@ const BASE = 'http://localhost:8090';
   console.log('Picker option text:', optionText);
   await targetOption.click();
   console.log('Selected the fresh request from the dropdown.');
-  await page.getByLabel('PO Number').fill('PO-PLAYWRIGHT-STANDALONE-001');
+  // No PO Number field anymore — it's generated server-side. Vendor + Unit Cost only.
   await page.getByRole('dialog').getByLabel('Vendor').click();
   await page.getByRole('option').first().click();
   await page.getByLabel('Unit Cost').fill('99.50');
   await page.getByRole('button', { name: 'Save' }).click();
-  await page.waitForSelector('text=PO-PLAYWRIGHT-STANDALONE-001', { timeout: 10000 });
-  console.log('Create succeeded.');
+  // Locate the new row by the request id column, not by a typed PO number.
+  const row = page.locator('tr', { hasText: `#${target}` });
+  await row.waitFor({ timeout: 10000 });
+  const generatedPoNumber = await row.locator('td').first().textContent();
+  console.log('Create succeeded. Auto-generated PO Number:', generatedPoNumber);
 
   console.log('=== Edit it ===');
-  const row = page.locator('tr', { hasText: 'PO-PLAYWRIGHT-STANDALONE-001' });
   await row.getByRole('button').first().click();
   const unitCostField = page.getByRole('dialog').getByLabel('Unit Cost');
   await unitCostField.waitFor({ timeout: 10000 });
@@ -85,10 +87,10 @@ const BASE = 'http://localhost:8090';
   const totalCostCell = await row.locator('td').nth(5).textContent();
   console.log('Total cost after edit:', totalCostCell);
 
-  console.log('=== Delete it ===');
+  console.log('=== Delete it (soft delete — row should still leave the grid) ===');
   await row.getByRole('button').last().click();
   await page.getByRole('button', { name: 'Delete' }).click();
-  await page.waitForSelector('text=PO-PLAYWRIGHT-STANDALONE-001', { state: 'detached', timeout: 10000 });
+  await row.waitFor({ state: 'detached', timeout: 10000 });
   console.log('Delete succeeded.');
 
   console.log('=== Clean up the test request ===');

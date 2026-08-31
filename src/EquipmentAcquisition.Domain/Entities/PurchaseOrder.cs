@@ -14,6 +14,7 @@ public class PurchaseOrder
     public decimal TotalCost { get; set; }
 
     public DateTime OrderDate { get; set; }
+    public bool IsDeleted { get; set; }
 
     public AcquisitionRequest AcquisitionRequest { get; set; } = null!;
     public Vendor Vendor { get; set; } = null!;

@@ -177,10 +177,10 @@ export interface PurchaseOrderDto {
   orderDate: string;
 }
 
+// No poNumber — generated server-side, not client-supplied.
 export interface CreatePurchaseOrderDto {
   acquisitionRequestId: number;
   vendorId: number;
-  poNumber: string;
   quantity: number;
   unitCost: number;
 }

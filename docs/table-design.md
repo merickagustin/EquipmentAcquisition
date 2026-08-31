@@ -118,13 +118,14 @@ simple (no "should I even insert this row?" branching) and keeps the
 | Column | Type | Notes |
 |---|---|---|
 | Id | int PK | |
-| AcquisitionRequestId | int FK, unique | 1:1 with AcquisitionRequest |
+| AcquisitionRequestId | int FK, unique (filtered) | 1:0-or-1 with AcquisitionRequest — see below |
 | VendorId | int FK | → Vendor, restrict delete |
-| PoNumber | varchar | unique |
+| PoNumber | varchar | unique, generated — see below |
 | Quantity | int | |
 | UnitCost | decimal(18,2) | |
 | TotalCost | decimal(18,2) | stored, not computed on read (see note below) |
 | OrderDate | datetime | |
+| IsDeleted | bit, default 0 | soft delete — see below |
 
 **Why TotalCost is stored, not computed:** at 25,000 rows, the report sums
 cost across every matching row. Storing `TotalCost = Quantity * UnitCost` at
@@ -132,6 +133,44 @@ write time avoids a multiply-and-sum over the full row set on every report
 run — a deliberate denormalize-for-read-performance call, kept in sync in
 the application service layer rather than a DB trigger (simpler to reason
 about, and this dataset has no concurrent-write concern).
+
+**PoNumber is generated, not typed.** `PurchaseOrderService.CreateAsync`
+inserts with a placeholder, lets SQL Server assign the identity `Id`, then
+sets `PoNumber = "PO-{year}-{id:D6}"` and saves again — the same format the
+seeder uses, so a runtime-created PO and a seeded one are indistinguishable.
+Deriving the number from the row's own never-reused `Id` makes a collision
+structurally impossible; there is no uniqueness check to write or bypass.
+
+**Delete is soft, mirroring AcquisitionRequest, for the same reason** — a
+PO is real business history (it may already have Assets tracked through
+it) the moment it exists. `PurchaseOrderService.DeleteAsync` sets
+`IsDeleted = true` instead of removing the row. Unlike AcquisitionRequest,
+this is enforced via an EF Core global query filter
+(`HasQueryFilter(x => !x.IsDeleted)`) rather than filtering each repository
+method by hand — every LINQ query, including through
+`AcquisitionRequest.PurchaseOrder`'s navigation property, sees only active
+rows automatically. That matters here specifically: a manual per-method
+filter would have missed the navigation-property path (`r.PurchaseOrder ==
+null` silently doesn't apply an unrelated method's manual filter), which is
+exactly the check the Create-PO dropdown depends on to know a request is
+still eligible.
+
+**The `AcquisitionRequestId` unique index is filtered**
+(`WHERE IsDeleted = 0`), not plain unique — a soft-deleted PO must not
+block a replacement. Without the filter, the old row would still count
+toward uniqueness forever, and a request whose PO was "removed" could never
+get a new one. `PoNumber`'s index stays unfiltered — it doesn't need the
+same treatment, since generated numbers never collide regardless of delete
+state.
+
+**One place deliberately ignores the filter:**
+`VendorRepository.HasPurchaseOrdersAsync`, the guard behind deleting a
+Vendor. A soft-deleted PO still physically references its Vendor — the
+FK doesn't go away — and the DB's Restrict constraint enforces that
+regardless of `IsDeleted`. If this check respected the filter, it would
+pass, then the actual `DELETE` would crash on the FK violation instead of
+returning the clean `409` it returns today. Verified live: a Vendor with
+only a soft-deleted PO against it still correctly refuses deletion.
 
 ## Asset
 | Column | Type | Notes |

@@ -66,10 +66,14 @@ real delete, but the row and its audit history survive.
 
 **Purchase Orders** (`/purchase-orders`, under `Acquisitions`) is a second,
 standalone entry point onto the same data — a paginated list with optional
-Vendor/Acquisition-Request-id filters. Creating one here takes a raw
-Acquisition Request id with the same inline lookup pattern as Assets below
-(confirms the request is Approved before you commit) rather than a picker,
-since there's no bounded list of eligible requests to choose from.
+Vendor/Acquisition-Request-id filters. Creating one here uses a dropdown of
+Approved requests with no PO yet, each option showing full detail (item,
+department, requester, quantity, cost) so it's unambiguous which real
+request you're attaching a PO to. **PO Number is generated, not typed** —
+`PO-{year}-{id}`, assigned right after the row is created, the same format
+the seed data uses. Deleting a PO here is also a **soft** delete, same
+reasoning as Requests: the row (and any audit history) survives, and the
+request it was for becomes eligible for a replacement PO again.
 
 **Asset Registry** (`/assets`, under `Assets`) is a paginated CRUD list —
 optional Department/Status filters, and creating one asks for a Purchase

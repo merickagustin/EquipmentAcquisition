@@ -57,17 +57,24 @@ public class PurchaseOrderService : IPurchaseOrderService
         if (dto.Quantity < 1)
             throw new ValidationException("Quantity must be at least 1.");
 
+        // PoNumber is generated, not client-supplied — it needs the row's own identity
+        // Id, which SQL Server doesn't assign until the INSERT commits. Two saves: once
+        // to get the Id, once to persist the number derived from it. Same format the
+        // seeder uses (PO-{year}-{id:D6}), so a generated and a seeded PO are indistinguishable.
         var purchaseOrder = new PurchaseOrder
         {
             AcquisitionRequestId = dto.AcquisitionRequestId,
             VendorId = dto.VendorId,
-            PoNumber = dto.PoNumber,
+            PoNumber = string.Empty,
             Quantity = dto.Quantity,
             UnitCost = dto.UnitCost,
             TotalCost = Math.Round(dto.UnitCost * dto.Quantity, 2),
             OrderDate = DateTime.UtcNow
         };
         await _purchaseOrders.AddAsync(purchaseOrder);
+
+        purchaseOrder.PoNumber = $"PO-{purchaseOrder.OrderDate.Year}-{purchaseOrder.Id:D6}";
+        await _purchaseOrders.UpdateAsync(purchaseOrder);
 
         await _auditTrail.AddAsync(TableName, purchaseOrder.Id, AuditAction.Insert, null, Serialize(purchaseOrder));
         await _cacheRefreshQueue.EnqueueForRequestAsync(dto.AcquisitionRequestId);
@@ -97,6 +104,11 @@ public class PurchaseOrderService : IPurchaseOrderService
         return ToDto(purchaseOrder);
     }
 
+    // Soft delete, same reasoning as AcquisitionRequest — a PO is real business history
+    // (it may already have assets tracked through it), so retiring it from view keeps
+    // that history instead of erasing it. The filtered unique index on
+    // AcquisitionRequestId (WHERE IsDeleted = 0) is what allows a replacement PO to be
+    // created afterward without colliding with this now-inactive row.
     public async Task DeleteAsync(int id)
     {
         var purchaseOrder = await GetOrThrowAsync(id);
@@ -106,9 +118,10 @@ public class PurchaseOrderService : IPurchaseOrderService
 
         var oldValues = Serialize(purchaseOrder);
         var requestId = purchaseOrder.AcquisitionRequestId;
-        await _purchaseOrders.DeleteAsync(purchaseOrder);
+        purchaseOrder.IsDeleted = true;
+        await _purchaseOrders.UpdateAsync(purchaseOrder);
 
-        await _auditTrail.AddAsync(TableName, id, AuditAction.Delete, oldValues, null);
+        await _auditTrail.AddAsync(TableName, id, AuditAction.Delete, oldValues, Serialize(purchaseOrder));
         await _cacheRefreshQueue.EnqueueForRequestAsync(requestId);
     }
 
@@ -117,7 +130,7 @@ public class PurchaseOrderService : IPurchaseOrderService
 
     private static string Serialize(PurchaseOrder po) => JsonSerializer.Serialize(new
     {
-        po.AcquisitionRequestId, po.VendorId, po.PoNumber, po.Quantity, po.UnitCost, po.TotalCost, po.OrderDate
+        po.AcquisitionRequestId, po.VendorId, po.PoNumber, po.Quantity, po.UnitCost, po.TotalCost, po.OrderDate, po.IsDeleted
     });
 
     private static PurchaseOrderDto ToDto(PurchaseOrder po) => new(

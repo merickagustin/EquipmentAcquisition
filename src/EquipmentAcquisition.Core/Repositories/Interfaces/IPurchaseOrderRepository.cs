@@ -11,7 +11,6 @@ public interface IPurchaseOrderRepository
     Task<PurchaseOrder?> GetByAcquisitionRequestIdAsync(int acquisitionRequestId);
     Task<PurchaseOrder> AddAsync(PurchaseOrder purchaseOrder);
     Task UpdateAsync(PurchaseOrder purchaseOrder);
-    Task DeleteAsync(PurchaseOrder purchaseOrder);
     Task<AcquisitionRequest?> GetRequestAsync(int acquisitionRequestId);
     Task<List<EligibleRequestDto>> GetApprovedWithoutPurchaseOrderAsync();
     Task<bool> VendorExistsAsync(int vendorId);

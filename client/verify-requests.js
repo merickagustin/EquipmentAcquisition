@@ -63,7 +63,7 @@ const BASE = 'http://localhost:8090';
   await page.getByLabel('Vendor').waitFor({ timeout: 10000 });
   await page.getByLabel('Vendor').click();
   await page.getByRole('option').first().click();
-  await page.getByLabel('PO Number').fill('PO-PLAYWRIGHT-001');
+  // No PO Number field anymore — it's generated server-side.
   await page.getByLabel('Unit Cost').fill('750');
   await page.getByRole('button', { name: 'Save' }).click();
   await waitForNoticeThenRefresh('Purchase order created');

@@ -40,7 +40,7 @@ import type {
 const eligibleRequestLabel = (r: EligibleRequestDto) =>
   `#${r.id} — ${r.itemDescription} — ${r.departmentName} — requested by ${r.requestedByName} — qty ${r.quantity} — $${r.estimatedCost.toFixed(2)}`;
 
-const emptyCreateForm = { acquisitionRequestId: 0, vendorId: 0, poNumber: '', quantity: 1, unitCost: 0 };
+const emptyCreateForm = { acquisitionRequestId: 0, vendorId: 0, quantity: 1, unitCost: 0 };
 const emptyEditForm: UpdatePurchaseOrderDto = { vendorId: 0, quantity: 1, unitCost: 0 };
 
 export function PurchaseOrdersAdminApp() {
@@ -315,12 +315,6 @@ export function PurchaseOrdersAdminApp() {
                   }}
                 />
               )}
-            />
-            <TextField
-              label="PO Number"
-              value={createForm.poNumber}
-              onChange={(e) => setCreateForm({ ...createForm, poNumber: e.target.value })}
-              required
             />
           </>
         )}

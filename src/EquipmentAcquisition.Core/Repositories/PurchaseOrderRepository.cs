@@ -55,12 +55,6 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
 
     public Task UpdateAsync(PurchaseOrder purchaseOrder) => _context.SaveChangesAsync();
 
-    public async Task DeleteAsync(PurchaseOrder purchaseOrder)
-    {
-        _context.PurchaseOrders.Remove(purchaseOrder);
-        await _context.SaveChangesAsync();
-    }
-
     public Task<AcquisitionRequest?> GetRequestAsync(int acquisitionRequestId) =>
         _context.AcquisitionRequests.FirstOrDefaultAsync(r => r.Id == acquisitionRequestId && !r.IsDeleted);
 

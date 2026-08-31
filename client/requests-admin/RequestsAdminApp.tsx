@@ -77,7 +77,7 @@ const emptyEditForm: UpdateAcquisitionRequestDto = {
   estimatedCost: 0,
 };
 
-const emptyPoForm = { vendorId: 0, poNumber: '', quantity: 1, unitCost: 0 };
+const emptyPoForm = { vendorId: 0, quantity: 1, unitCost: 0 };
 
 const statusChipColor: Record<AcquisitionRequestStatusValue, 'warning' | 'success' | 'error'> = {
   0: 'warning',
@@ -128,6 +128,7 @@ export function RequestsAdminApp() {
   const [poTarget, setPoTarget] = useState<RequestDetailDto | null>(null);
   const [poEditingId, setPoEditingId] = useState<number | null>(null);
   const [poForm, setPoForm] = useState(emptyPoForm);
+  const [existingPoNumber, setExistingPoNumber] = useState<string | null>(null);
   const [poLoading, setPoLoading] = useState(false);
   const [poSubmitting, setPoSubmitting] = useState(false);
   const [poError, setPoError] = useState<string | null>(null);
@@ -301,6 +302,7 @@ export function RequestsAdminApp() {
     setPoError(null);
     setPoEditingId(null);
     setPoForm({ ...emptyPoForm, quantity: row.quantity });
+    setExistingPoNumber(null);
     setPoLoading(true);
     try {
       const existing = await apiClient.get<PurchaseOrderDto | null>(
@@ -308,9 +310,9 @@ export function RequestsAdminApp() {
       );
       if (existing) {
         setPoEditingId(existing.id);
+        setExistingPoNumber(existing.poNumber);
         setPoForm({
           vendorId: existing.vendorId,
-          poNumber: existing.poNumber,
           quantity: existing.quantity,
           unitCost: existing.unitCost,
         });
@@ -719,14 +721,11 @@ export function RequestsAdminApp() {
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
-              label="PO Number"
-              value={poForm.poNumber}
-              onChange={(e) => setPoForm({ ...poForm, poNumber: e.target.value })}
-              required
-              disabled={poEditingId !== null}
-              helperText={poEditingId !== null ? 'PO Number cannot be changed after creation' : undefined}
-            />
+            {existingPoNumber !== null && (
+              <Typography variant="body2" color="text.secondary">
+                PO Number: {existingPoNumber} (generated, not editable)
+              </Typography>
+            )}
             <TextField
               type="number"
               label="Quantity"

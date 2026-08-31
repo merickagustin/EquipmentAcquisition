@@ -2,6 +2,7 @@ using EquipmentAcquisition.Core.Data;
 using EquipmentAcquisition.Core.Dtos;
 using EquipmentAcquisition.Core.Exceptions;
 using EquipmentAcquisition.Core.Repositories.Interfaces;
+using EquipmentAcquisition.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using CacheEntity = EquipmentAcquisition.Domain.Entities.EquipmentAcquisitionDetailCache;
 
@@ -65,5 +66,30 @@ public class DetailCacheRepository : IDetailCacheRepository
             .ToListAsync();
 
         return new PagedResult<RequestDetailDto>(items, totalCount, query.PageNumber, query.PageSize);
+    }
+
+    // Every Department appears, including zero-pending ones — a correlated count
+    // per department, not a GROUP BY over the cache, so the Home widget's row count
+    // is always complete rather than "however many departments happen to have a
+    // pending request right now." Sorted after materializing, not in the query —
+    // EF Core can't translate ORDER BY on a property of a record constructed from a
+    // correlated subquery. Fine either way at 20 departments.
+    public async Task<List<DepartmentPendingCountDto>> GetPendingCountsByDepartmentAsync()
+    {
+        var counts = await _context.Departments.AsNoTracking()
+            .Select(d => new
+            {
+                d.Id,
+                d.Name,
+                PendingCount = _context.Set<CacheEntity>().Count(c =>
+                    !c.IsDeleted && c.DepartmentId == d.Id && c.Status == (byte)AcquisitionRequestStatus.Pending)
+            })
+            .ToListAsync();
+
+        return counts
+            .OrderByDescending(x => x.PendingCount)
+            .ThenBy(x => x.Name)
+            .Select(x => new DepartmentPendingCountDto(x.Id, x.Name, x.PendingCount))
+            .ToList();
     }
 }

@@ -3,6 +3,7 @@ const path = require('path');
 module.exports = {
   entry: {
     nav: './nav/index.tsx',
+    home: './home/index.tsx',
     'menu-admin': './menu-admin/index.tsx',
     // Named *-admin, not e.g. 'vendors' — an entry named 'vendors' would collide
     // with the splitChunks cacheGroup below, which already outputs to vendors/app.js.

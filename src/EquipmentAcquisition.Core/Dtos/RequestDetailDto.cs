@@ -12,3 +12,8 @@ public record RequestListQuery(
     int? RequestedByEmployeeId = null, int? ApprovedByEmployeeId = null,
     int PageNumber = 1, int PageSize = 50,
     string SortBy = "RequestDate", bool SortDescending = true);
+
+// Backs the Home page's pending-per-department widget. One row per Department —
+// including zero-pending ones, so the count of departments shown is always
+// complete, not just the ones with something to show.
+public record DepartmentPendingCountDto(int DepartmentId, string DepartmentName, int PendingCount);

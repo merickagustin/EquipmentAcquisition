@@ -140,6 +140,15 @@ export interface RequestDetailDto {
   refreshedAt: string;
 }
 
+// Mirrors EquipmentAcquisition.Core.Dtos.DepartmentPendingCountDto — backs the
+// Home page's pending-per-department widget. One row per Department, always,
+// including zero-pending ones.
+export interface DepartmentPendingCountDto {
+  departmentId: number;
+  departmentName: string;
+  pendingCount: number;
+}
+
 // Mirrors EquipmentAcquisition.Core.Dtos.RequestListQuery — DepartmentId, Status,
 // From, To are mandatory (match the cache's composite index); the rest optional.
 export interface RequestListQuery {

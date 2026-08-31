@@ -27,6 +27,12 @@ public class AcquisitionRequestsController : ControllerBase
     public async Task<ActionResult<PagedResult<RequestDetailDto>>> GetGrid([FromQuery] RequestListQuery query) =>
         Ok(await _detailCache.GetPagedAsync(query));
 
+    /// <summary>Backs the Home page's pending-per-department widget — every
+    /// Department, including zero-pending ones.</summary>
+    [HttpGet("pending-by-department")]
+    public async Task<ActionResult<List<DepartmentPendingCountDto>>> GetPendingByDepartment() =>
+        Ok(await _detailCache.GetPendingCountsByDepartmentAsync());
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<AcquisitionRequestDto>> GetById(int id) => Ok(await _service.GetByIdAsync(id));
 

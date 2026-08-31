@@ -17,6 +17,8 @@ client/
   shared/                    theme, DTO types, API client, tree helpers,
                              shared MUI components — see inventory below
   nav/                       React+MUI app — the dynamic menu, its own bundle
+  home/                      React+MUI app — landing page, conditional on
+                             the Requests MenuItem's IsActive flag
   menu-admin/                React+MUI app — MenuItem CRUD, its own bundle
   vendors-admin/              React+MUI app — Vendor CRUD, its own bundle
   departments-admin/          React+MUI app — Department CRUD, its own bundle
@@ -108,8 +110,9 @@ its own `app.js` — just with the hardcoded parts replaced by data. It is
   both mounted into (nav in one div, page content in another) and,
   independently, the MUI theme module they both import from `client/shared`.
 
-Nine bundles exist today, one per sidebar entry: `nav` (the dynamic menu
-itself), `menu-admin` (MenuItem CRUD), `vendors-admin` /
+Ten bundles exist today, one per sidebar entry: `nav` (the dynamic menu
+itself), `home` (the landing page — see "Home: reading a MenuItem flag
+outside the nav" below), `menu-admin` (MenuItem CRUD), `vendors-admin` /
 `departments-admin` / `equipment-categories-admin` (reference-data CRUD,
 same list+dialog shape as `menu-admin` minus the tree), `requests-admin`
 (a paginated, filtered grid over `AcquisitionRequest` with an
@@ -290,6 +293,37 @@ pages aren't redundant: `requests-admin`'s action is the fast path while
 you're already looking at a specific request; `purchase-orders-admin` is
 for browsing/filtering POs on their own terms (by vendor, say) without
 first finding the request that spawned each one.
+
+## Home: reading a MenuItem flag outside the nav
+
+`home` is the one bundle whose content is conditional on something other
+than its own data. On mount it fetches `/api/menu-items` (the same call
+`nav` makes) and checks whether the Requests entry — the row with
+`route === '/requests'` — is `isActive`. Only if it is does it fetch
+`GET /api/acquisition-requests/pending-by-department` and render the
+Pending Requisitions by Department widget; otherwise it renders a plain
+note explaining why the widget isn't there and how to turn it on.
+
+The point isn't the widget — it's that `IsActive` already means "this
+page exists and is reachable," which is exactly the condition that should
+gate *any* content referencing that page, not just its own nav entry.
+Toggling Requests off in Menu Admin doesn't just remove a sidebar link;
+it also removes anything else that assumed that page was live. This is
+the same `MenuItem` flag doing double duty, not a second flag invented
+for the Home page specifically — one source of truth for "is this feature
+on," read from two different bundles for two different purposes.
+
+`GetPendingCountsByDepartmentAsync` (backing that endpoint) is worth a
+note in its own right: it returns *every* Department, including
+zero-pending ones, via a correlated `Count()` subquery per department
+rather than a `GROUP BY` over the cache — a `GROUP BY` would silently
+drop any department with nothing pending, which is a real dashboard bug
+(a quiet department reads as "no data" instead of "genuinely nothing
+pending"). It also can't be ordered as part of the same query — EF Core
+won't translate an `ORDER BY` on a property of a `record` constructed
+from a correlated subquery — so results are materialized first and sorted
+client-side. Fine at 20 departments; would need revisiting past a few
+hundred.
 
 ## Shared theme, independent apps
 

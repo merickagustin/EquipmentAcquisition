@@ -28,10 +28,10 @@ its frontend entirely.
 | Testing | xUnit + Moq (backend, 33 tests), Playwright (real headless-browser E2E) |
 | DevOps | Docker Compose (3 services), Git/GitHub |
 
-Nine independent React bundles (`nav`, `menu-admin`, `vendors-admin`,
-`departments-admin`, `equipment-categories-admin`, `requests-admin`,
-`assets-admin`, `reports-admin`, `purchase-orders-admin`) — one per
-sidebar page, not a single SPA. See `architecture.md` for why.
+Ten independent React bundles (`nav`, `home`, `menu-admin`,
+`vendors-admin`, `departments-admin`, `equipment-categories-admin`,
+`requests-admin`, `assets-admin`, `reports-admin`, `purchase-orders-admin`)
+— one per sidebar page, not a single SPA. See `architecture.md` for why.
 
 ## Docker (recommended)
 
@@ -66,6 +66,14 @@ step (25,000 `AcquisitionRequest` rows + `MenuItem` seed, ~7 seconds):
 ```bash
 docker compose run api dotnet EquipmentAcquisition.Api.dll --seed
 ```
+
+**http://localhost:8090/** (Home) shows a Pending Requisitions by
+Department widget — every department, including zero-pending ones, sorted
+by count. It only appears while the Acquisitions → Requests menu entry is
+active; toggle it off in Menu Admin and the widget is replaced by a note
+saying so, toggle it back on and it reappears. Not just cosmetic — it's
+reading the exact same `IsActive` flag that controls whether `/requests`
+is reachable from the sidebar at all.
 
 Then visit **http://localhost:8090/menu-admin** for the full CRUD demo —
 sidebar tree on the left, indented table on the right. Toggling `IsActive`

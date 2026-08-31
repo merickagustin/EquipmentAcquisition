@@ -9,6 +9,7 @@ module.exports = {
     'vendors-admin': './vendors-admin/index.tsx',
     'departments-admin': './departments-admin/index.tsx',
     'equipment-categories-admin': './equipment-categories-admin/index.tsx',
+    'requests-admin': './requests-admin/index.tsx',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

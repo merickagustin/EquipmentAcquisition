@@ -29,6 +29,12 @@ public class PurchaseOrderService : IPurchaseOrderService
     public async Task<PurchaseOrderDto> GetByIdAsync(int id) =>
         ToDto(await GetOrThrowAsync(id));
 
+    public async Task<PurchaseOrderDto?> GetByAcquisitionRequestIdAsync(int acquisitionRequestId)
+    {
+        var purchaseOrder = await _purchaseOrders.GetByAcquisitionRequestIdAsync(acquisitionRequestId);
+        return purchaseOrder is null ? null : ToDto(purchaseOrder);
+    }
+
     public async Task<PurchaseOrderDto> CreateAsync(CreatePurchaseOrderDto dto)
     {
         var request = await _purchaseOrders.GetRequestAsync(dto.AcquisitionRequestId)

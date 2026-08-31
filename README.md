@@ -51,9 +51,20 @@ on a row updates the sidebar live. The same list/dialog CRUD pattern (built
 on the shared `FormDialog` template) also powers three reference-data
 admin pages, all reachable from the sidebar under `Administration`:
 **Vendors** (`/vendors`), **Departments** (`/departments`), and
-**Equipment Categories** (`/equipment-categories`). The rest of the
-sidebar's routes (Requests, Purchase Orders, Asset Registry, Department
-Spend) don't have pages yet, so their menu entries stay inactive rather
+**Equipment Categories** (`/equipment-categories`).
+
+**Acquisition Requests** (`/requests`, under the sidebar's `Acquisitions`
+group) is the more involved demo — a paginated, filtered grid (Department +
+Status + date range are mandatory, matching the cache table's composite
+index; Equipment Category is an optional extra filter) reading from
+`EquipmentAcquisitionDetailCache` rather than the base tables. Create a
+request, then Approve or Reject it (Pending rows only); once Approved, its
+row grows a shopping-cart action to create/edit/remove the linked Purchase
+Order. There's no separate Purchase Orders page — a PO is a 1:0-or-1
+extension of an Approved request (unique FK), not a flat list of ~15k rows
+with no natural entry point, so managing it is a per-row action here
+instead. The rest of the sidebar's routes (Asset Registry, Department
+Spend) don't have pages yet, so those menu entries stay inactive rather
 than linking to a 404.
 
 **Resetting to a clean slate:**

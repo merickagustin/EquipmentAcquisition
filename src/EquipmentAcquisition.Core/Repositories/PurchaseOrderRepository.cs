@@ -20,6 +20,12 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
     public Task<PurchaseOrder?> GetByIdAsync(int id) =>
         _context.PurchaseOrders.FirstOrDefaultAsync(po => po.Id == id);
 
+    // AcquisitionRequestId is unique on PurchaseOrders (see PurchaseOrderConfiguration) —
+    // at most one row, never a list. Backs the Requests page's "already has a PO?" lookup
+    // without ever fetching the full PurchaseOrders table.
+    public Task<PurchaseOrder?> GetByAcquisitionRequestIdAsync(int acquisitionRequestId) =>
+        _context.PurchaseOrders.AsNoTracking().FirstOrDefaultAsync(po => po.AcquisitionRequestId == acquisitionRequestId);
+
     public async Task<PurchaseOrder> AddAsync(PurchaseOrder purchaseOrder)
     {
         _context.PurchaseOrders.Add(purchaseOrder);

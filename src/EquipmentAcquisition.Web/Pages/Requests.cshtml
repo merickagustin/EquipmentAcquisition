@@ -1,0 +1,11 @@
+@page "/requests"
+@model EquipmentAcquisition.Web.Pages.RequestsModel
+@{
+    ViewData["Title"] = "Acquisition Requests";
+}
+
+@* content-root is filled by the requests-admin React bundle — nothing server-rendered here. *@
+
+@section Scripts {
+    <script src="~/dist/requests-admin/app.js"></script>
+}

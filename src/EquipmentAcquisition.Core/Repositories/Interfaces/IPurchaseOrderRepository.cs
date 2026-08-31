@@ -6,6 +6,7 @@ public interface IPurchaseOrderRepository
 {
     Task<List<PurchaseOrder>> GetAllAsync();
     Task<PurchaseOrder?> GetByIdAsync(int id);
+    Task<PurchaseOrder?> GetByAcquisitionRequestIdAsync(int acquisitionRequestId);
     Task<PurchaseOrder> AddAsync(PurchaseOrder purchaseOrder);
     Task UpdateAsync(PurchaseOrder purchaseOrder);
     Task DeleteAsync(PurchaseOrder purchaseOrder);

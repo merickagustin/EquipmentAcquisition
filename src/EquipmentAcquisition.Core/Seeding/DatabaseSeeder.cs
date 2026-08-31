@@ -140,14 +140,11 @@ public class DatabaseSeeder
     }
 
     // Hand-authored, not Bogus — thirteen rows, two levels deep. See table-design.md's
-    // "Seed — five top-level menus." Active only where a shell page actually exists
-    // (Home, Acquisitions > Requests, Assets > Asset Registry, Reports > Department
-    // Spend, Menu Admin, Vendors, Departments, Equipment Categories) — the rest stay
-    // inactive so a reviewer never lands on a 404 from the nav. "Purchase Orders" has
-    // no page of its own: creating/editing a PO is a per-row action on an Approved
-    // request in Requests, not a standalone flat list — PurchaseOrders has 1:0-or-1
-    // rows per request (unique FK) and ~15k total, so browsing it directly would mean
-    // an unbounded fetch with no natural entry point.
+    // "Seed — five top-level menus." All active — every sidebar entry now has a page
+    // behind it. Purchase Orders (/purchase-orders) is a standalone paginated/filtered
+    // list, same shape as Asset Registry, alongside (not replacing) the inline
+    // create/edit/remove action on an Approved row in Requests — see architecture.md's
+    // "Acquisition Requests: a second shape" for why Requests keeps its own entry point.
     private async Task<int> SeedMenuItemsAsync()
     {
         var home = new MenuItem { Label = "Home", Route = "/", DisplayOrder = 1, IsActive = true };
@@ -163,7 +160,7 @@ public class DatabaseSeeder
         var children = new[]
         {
             new MenuItem { ParentId = acquisitions.Id, Label = "Requests", Route = "/requests", DisplayOrder = 1, IsActive = true },
-            new MenuItem { ParentId = acquisitions.Id, Label = "Purchase Orders", Route = "/purchase-orders", DisplayOrder = 2, IsActive = false },
+            new MenuItem { ParentId = acquisitions.Id, Label = "Purchase Orders", Route = "/purchase-orders", DisplayOrder = 2, IsActive = true },
             new MenuItem { ParentId = assets.Id, Label = "Asset Registry", Route = "/assets", DisplayOrder = 1, IsActive = true },
             new MenuItem { ParentId = reports.Id, Label = "Department Spend", Route = "/reports/department-spend", DisplayOrder = 1, IsActive = true },
             new MenuItem { ParentId = administration.Id, Label = "Menu Admin", Route = "/menu-admin", DisplayOrder = 1, IsActive = true },

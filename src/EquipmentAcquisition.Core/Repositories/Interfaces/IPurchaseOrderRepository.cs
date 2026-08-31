@@ -1,3 +1,4 @@
+using EquipmentAcquisition.Core.Dtos;
 using EquipmentAcquisition.Domain.Entities;
 
 namespace EquipmentAcquisition.Core.Repositories.Interfaces;
@@ -5,6 +6,7 @@ namespace EquipmentAcquisition.Core.Repositories.Interfaces;
 public interface IPurchaseOrderRepository
 {
     Task<List<PurchaseOrder>> GetAllAsync();
+    Task<(List<PurchaseOrder> Items, int TotalCount)> GetPagedAsync(PurchaseOrderListQuery query);
     Task<PurchaseOrder?> GetByIdAsync(int id);
     Task<PurchaseOrder?> GetByAcquisitionRequestIdAsync(int acquisitionRequestId);
     Task<PurchaseOrder> AddAsync(PurchaseOrder purchaseOrder);

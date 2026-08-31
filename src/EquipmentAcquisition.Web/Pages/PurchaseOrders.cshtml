@@ -1,0 +1,11 @@
+@page "/purchase-orders"
+@model EquipmentAcquisition.Web.Pages.PurchaseOrdersModel
+@{
+    ViewData["Title"] = "Purchase Orders";
+}
+
+@* content-root is filled by the purchase-orders-admin React bundle — nothing server-rendered here. *@
+
+@section Scripts {
+    <script src="~/dist/purchase-orders-admin/app.js"></script>
+}

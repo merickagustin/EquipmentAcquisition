@@ -1,4 +1,5 @@
 using EquipmentAcquisition.Core.Data;
+using EquipmentAcquisition.Core.Dtos;
 using EquipmentAcquisition.Core.Repositories.Interfaces;
 using EquipmentAcquisition.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,25 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
 
     public Task<List<PurchaseOrder>> GetAllAsync() =>
         _context.PurchaseOrders.AsNoTracking().OrderByDescending(po => po.OrderDate).ToListAsync();
+
+    public async Task<(List<PurchaseOrder> Items, int TotalCount)> GetPagedAsync(PurchaseOrderListQuery query)
+    {
+        var filtered = _context.PurchaseOrders.AsNoTracking().AsQueryable();
+        if (query.VendorId is not null)
+            filtered = filtered.Where(po => po.VendorId == query.VendorId);
+        if (query.AcquisitionRequestId is not null)
+            filtered = filtered.Where(po => po.AcquisitionRequestId == query.AcquisitionRequestId);
+
+        var totalCount = await filtered.CountAsync();
+        var items = await filtered
+            .OrderByDescending(po => po.OrderDate)
+            .ThenBy(po => po.Id)
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
 
     public Task<PurchaseOrder?> GetByIdAsync(int id) =>
         _context.PurchaseOrders.FirstOrDefaultAsync(po => po.Id == id);

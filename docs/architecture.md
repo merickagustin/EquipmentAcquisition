@@ -28,6 +28,9 @@ client/
                                 inline PurchaseOrder lookup, its own bundle
   reports-admin/                React+MUI app — Department Spend Report,
                                 read-only, its own bundle
+  purchase-orders-admin/        React+MUI app — PurchaseOrder paginated
+                                CRUD, inline AcquisitionRequest lookup,
+                                its own bundle
 ```
 
 ## Backend layering: Application and Infrastructure are one project
@@ -105,7 +108,7 @@ its own `app.js` — just with the hardcoded parts replaced by data. It is
   both mounted into (nav in one div, page content in another) and,
   independently, the MUI theme module they both import from `client/shared`.
 
-Eight bundles exist today, one per sidebar entry: `nav` (the dynamic menu
+Nine bundles exist today, one per sidebar entry: `nav` (the dynamic menu
 itself), `menu-admin` (MenuItem CRUD), `vendors-admin` /
 `departments-admin` / `equipment-categories-admin` (reference-data CRUD,
 same list+dialog shape as `menu-admin` minus the tree), `requests-admin`
@@ -113,10 +116,11 @@ same list+dialog shape as `menu-admin` minus the tree), `requests-admin`
 approve/reject workflow and inline `PurchaseOrder` management — see
 "Acquisition Requests: a second shape" below), `assets-admin` (paginated
 CRUD over `Asset`, with an inline Purchase-Order-id lookup instead of a
-picker), and `reports-admin` (the read-only Department Spend Report — no
-CRUD, no `FormDialog`, just filters and a table). Purchase Orders is the
-one sidebar entry with no bundle of its own, deliberately — see
-"Acquisition Requests: a second shape" for why.
+picker), `reports-admin` (the read-only Department Spend Report — no
+CRUD, no `FormDialog`, just filters and a table), and
+`purchase-orders-admin` (paginated CRUD over `PurchaseOrder` itself, with
+an inline Acquisition-Request-id lookup — a second, standalone entry
+point onto the same rows `requests-admin` manages per-row).
 
 ## Build: Webpack, multiple entries
 
@@ -131,10 +135,11 @@ module.exports = {
     nav: './nav/index.tsx',
     'menu-admin': './menu-admin/index.tsx',
     // 'vendors-admin', 'departments-admin', 'equipment-categories-admin',
-    // 'requests-admin', 'assets-admin', 'reports-admin' follow the same
-    // one-entry-per-page pattern. Named *-admin, not e.g. 'vendors' — an
-    // entry named 'vendors' would collide with the splitChunks cacheGroup
-    // below, which already emits vendors/app.js.
+    // 'requests-admin', 'assets-admin', 'reports-admin',
+    // 'purchase-orders-admin' follow the same one-entry-per-page pattern.
+    // Named *-admin, not e.g. 'vendors' — an entry named 'vendors' would
+    // collide with the splitChunks cacheGroup below, which already emits
+    // vendors/app.js.
   },
   output: {
     filename: '[name]/app.js',
@@ -259,22 +264,32 @@ it can take a few seconds to appear below."* — with its own Refresh
 action, plus a persistent Refresh button in the page header. The delay is
 disclosed, not masked.
 
-**Purchase Orders have no page of their own.** `PurchaseOrder` has a
-unique FK on `AcquisitionRequestId` — 1:0-or-1, enforced at the DB level
-— and the table holds on the order of 15,000 rows with no natural browse
-entry point (you don't page through purchase orders, you look at *the*
-purchase order for a specific approved request, if it has one). A flat
-list page would mean fetching the whole table for no benefit. Instead, an
-Approved request's row grows a shopping-cart action that opens a
-`FormDialog` for creating, editing, or removing its linked PO. That
-dialog needs the PO's own id and full field set, which the grid row
-doesn't carry (it only has `VendorName`/`TotalCost`, enough to render the
-column, not enough to edit) — so opening the dialog calls
+**Purchase Orders started with no page of its own, and now has two entry
+points** — a deliberate reversal, not scope creep by accident. `PurchaseOrder`
+has a unique FK on `AcquisitionRequestId` — 1:0-or-1, enforced at the DB
+level — so an Approved request's row in `requests-admin` grows a
+shopping-cart action that opens a `FormDialog` for creating, editing, or
+removing *its* linked PO, without ever fetching the full `PurchaseOrders`
+table. That dialog needs the PO's own id and full field set, which the
+grid row doesn't carry (it only has `VendorName`/`TotalCost`, enough to
+render the column, not enough to edit) — so opening it calls
 `GET /api/purchase-orders/by-request/{acquisitionRequestId}`, a lookup
-added specifically to back this without ever fetching the full
-`PurchaseOrders` table. It returns `200` with a `null` body when no PO
-exists yet, not `404` — that's a normal state for an Approved request,
-not an error.
+added specifically to back this. It returns `200` with a `null` body when
+no PO exists yet, not `404` — that's a normal state for an Approved
+request, not an error.
+
+`purchase-orders-admin` is the second entry point: a standalone paginated
+list at `/purchase-orders`, backed by its own `GET /api/purchase-orders/grid`
+(optional Vendor/AcquisitionRequestId filters — like `AssetListQuery`, not
+`RequestListQuery`, since PurchaseOrders has no multi-join read model or
+mandatory-triad index to protect). Creating one here takes a raw
+Acquisition Request id with the same inline-lookup pattern `assets-admin`
+uses for Purchase Order ids — confirms the request is Approved before you
+commit, since there's no bounded picker list of eligible requests. The two
+pages aren't redundant: `requests-admin`'s action is the fast path while
+you're already looking at a specific request; `purchase-orders-admin` is
+for browsing/filtering POs on their own terms (by vendor, say) without
+first finding the request that spawned each one.
 
 ## Shared theme, independent apps
 
@@ -319,12 +334,13 @@ reference-data and requests pages are flat lists, no tree to build).
 `FormDialog` and `ConfirmDialog`, originally written for `menu-admin`
 alone with no second consumer yet, are now used by every CRUD bundle —
 `vendors-admin`, `departments-admin`, `equipment-categories-admin`,
-`assets-admin`, and `requests-admin` (five separate forms in that one
-bundle alone: create/edit request, approve, reject, and the
-purchase-order dialog) all render the same two components. `reports-admin`
-is the one exception — read-only, no form, no dialog, nothing to plug in.
-Nothing in `FormDialog.tsx` or `ConfirmDialog.tsx` changed to make any of
-this possible — the contract held.
+`assets-admin`, `purchase-orders-admin`, and `requests-admin` (five
+separate forms in that one bundle alone: create/edit request, approve,
+reject, and the purchase-order dialog) all render the same two
+components. `reports-admin` is the one exception — read-only, no form, no
+dialog, nothing to plug in. Nothing in `FormDialog.tsx` or
+`ConfirmDialog.tsx` changed to make any of this possible — the contract
+held.
 
 **`FormDialog` standardises three things**, and the third is the one that
 usually gets missed:

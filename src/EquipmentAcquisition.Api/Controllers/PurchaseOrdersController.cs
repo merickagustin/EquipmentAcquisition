@@ -18,6 +18,12 @@ public class PurchaseOrdersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<PurchaseOrderDto>>> GetAll() => Ok(await _service.GetAllAsync());
 
+    // Paginated/filterable — what the Purchase Orders page actually uses. GetAll above
+    // stays for API completeness/Swagger exploration, same split as AcquisitionRequests/Assets.
+    [HttpGet("grid")]
+    public async Task<ActionResult<PagedResult<PurchaseOrderDto>>> GetGrid([FromQuery] PurchaseOrderListQuery query) =>
+        Ok(await _service.GetPagedAsync(query));
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PurchaseOrderDto>> GetById(int id) => Ok(await _service.GetByIdAsync(id));
 

@@ -12,6 +12,7 @@ module.exports = {
     'requests-admin': './requests-admin/index.tsx',
     'assets-admin': './assets-admin/index.tsx',
     'reports-admin': './reports-admin/index.tsx',
+    'purchase-orders-admin': './purchase-orders-admin/index.tsx',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

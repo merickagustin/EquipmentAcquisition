@@ -60,12 +60,16 @@ index; Equipment Category is an optional extra filter) reading from
 `EquipmentAcquisitionDetailCache` rather than the base tables. Create a
 request, then Approve or Reject it (Pending rows only); once Approved, its
 row grows a shopping-cart action to create/edit/remove the linked Purchase
-Order. There's no separate Purchase Orders page — a PO is a 1:0-or-1
-extension of an Approved request (unique FK), not a flat list of ~15k rows
-with no natural entry point, so managing it is a per-row action here
-instead. Deleting a request is a **soft** delete (`IsDeleted`, on both the
+Order. Deleting a request is a **soft** delete (`IsDeleted`, on both the
 request and its cache row) — it disappears from every view exactly like a
 real delete, but the row and its audit history survive.
+
+**Purchase Orders** (`/purchase-orders`, under `Acquisitions`) is a second,
+standalone entry point onto the same data — a paginated list with optional
+Vendor/Acquisition-Request-id filters. Creating one here takes a raw
+Acquisition Request id with the same inline lookup pattern as Assets below
+(confirms the request is Approved before you commit) rather than a picker,
+since there's no bounded list of eligible requests to choose from.
 
 **Asset Registry** (`/assets`, under `Assets`) is a paginated CRUD list —
 optional Department/Status filters, and creating one asks for a Purchase

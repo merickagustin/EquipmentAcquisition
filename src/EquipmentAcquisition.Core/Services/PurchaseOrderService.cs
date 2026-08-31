@@ -26,6 +26,12 @@ public class PurchaseOrderService : IPurchaseOrderService
     public async Task<List<PurchaseOrderDto>> GetAllAsync() =>
         (await _purchaseOrders.GetAllAsync()).Select(ToDto).ToList();
 
+    public async Task<PagedResult<PurchaseOrderDto>> GetPagedAsync(PurchaseOrderListQuery query)
+    {
+        var (items, totalCount) = await _purchaseOrders.GetPagedAsync(query);
+        return new PagedResult<PurchaseOrderDto>(items.Select(ToDto).ToList(), totalCount, query.PageNumber, query.PageSize);
+    }
+
     public async Task<PurchaseOrderDto> GetByIdAsync(int id) =>
         ToDto(await GetOrThrowAsync(id));
 

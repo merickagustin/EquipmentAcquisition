@@ -191,6 +191,14 @@ export interface UpdatePurchaseOrderDto {
   unitCost: number;
 }
 
+// Mirrors EquipmentAcquisition.Core.Dtos.PurchaseOrderListQuery — all filters optional.
+export interface PurchaseOrderListQuery {
+  vendorId?: number;
+  acquisitionRequestId?: number;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
 // Mirrors EquipmentAcquisition.Domain.Enums.AssetStatus.
 export const AssetStatus = { InStock: 0, Assigned: 1, Maintenance: 2, Retired: 3 } as const;
 export type AssetStatusValue = 0 | 1 | 2 | 3;

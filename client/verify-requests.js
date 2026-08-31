@@ -11,6 +11,16 @@ const BASE = 'http://localhost:8090';
     if (msg.type() === 'error') errors.push(`console.error: ${msg.text()}`);
   });
 
+  // The grid reads an async-refreshed cache (DetailCacheRefreshWorker, 2s cycle) —
+  // a mutation shows a Snackbar notice instead of auto-retrying. Wait for that
+  // notice, give the worker a moment, then click the header's Refresh button.
+  const waitForNoticeThenRefresh = async (noticeText) => {
+    await page.waitForSelector(`text=${noticeText}`, { timeout: 10000 });
+    await page.waitForTimeout(2500);
+    await page.getByRole('button', { name: 'Refresh' }).first().click();
+    await page.waitForTimeout(500);
+  };
+
   console.log('=== Navigating to /requests ===');
   await page.goto(`${BASE}/requests`, { waitUntil: 'networkidle' });
   await page.waitForSelector('text=Acquisition Requests', { timeout: 10000 });
@@ -29,8 +39,9 @@ const BASE = 'http://localhost:8090';
   await page.getByLabel('Quantity').fill('2');
   await page.getByLabel('Estimated Cost').fill('1500');
   await page.getByRole('button', { name: 'Save' }).click();
+  await waitForNoticeThenRefresh('Request created');
   await page.waitForSelector('text=Playwright Test Laptop', { timeout: 10000 });
-  console.log('Create succeeded — "Playwright Test Laptop" appeared in the table.');
+  console.log('Create succeeded — "Playwright Test Laptop" appeared in the table after Refresh.');
 
   console.log('=== Approve it ===');
   const newRow = page.locator('tr', { hasText: 'Playwright Test Laptop' });
@@ -39,6 +50,7 @@ const BASE = 'http://localhost:8090';
   await page.getByLabel('Approved By').click();
   await page.getByRole('option').first().click();
   await page.getByRole('button', { name: 'Approve' }).click();
+  await waitForNoticeThenRefresh('Request approved');
   await page.waitForSelector('text=Playwright Test Laptop', { state: 'detached', timeout: 10000 });
   console.log('Approve succeeded — row left the Pending filter.');
 
@@ -54,9 +66,7 @@ const BASE = 'http://localhost:8090';
   await page.getByLabel('PO Number').fill('PO-PLAYWRIGHT-001');
   await page.getByLabel('Unit Cost').fill('750');
   await page.getByRole('button', { name: 'Save' }).click();
-  await page.waitForSelector('text=PO-PLAYWRIGHT-001', { state: 'hidden', timeout: 10000 }).catch(() => {});
-  console.log('PO create submitted.');
-  await page.waitForTimeout(1000);
+  await waitForNoticeThenRefresh('Purchase order created');
   const vendorCellText = await approvedRow.locator('td').nth(7).textContent();
   console.log('Vendor column now shows:', vendorCellText);
 
@@ -67,16 +77,14 @@ const BASE = 'http://localhost:8090';
   console.log('Loaded existing PO unit cost:', unitCostValue);
   await page.getByRole('button', { name: 'Remove Purchase Order' }).click();
   await page.getByRole('button', { name: 'Delete' }).click();
-  await page.waitForTimeout(1000);
+  await waitForNoticeThenRefresh('Purchase order removed');
   console.log('PO removed.');
 
   console.log('=== Clean up: delete the test request ===');
-  await page.getByLabel('Status').click();
-  await page.getByRole('option', { name: 'Approved' }).click();
-  await page.waitForSelector('text=Playwright Test Laptop', { timeout: 10000 });
   const cleanupRow = page.locator('tr', { hasText: 'Playwright Test Laptop' });
   await cleanupRow.getByRole('button').last().click();
   await page.getByRole('button', { name: 'Delete' }).click();
+  await waitForNoticeThenRefresh('Request deleted');
   await page.waitForSelector('text=Playwright Test Laptop', { state: 'detached', timeout: 10000 });
   console.log('Cleanup delete succeeded.');
 

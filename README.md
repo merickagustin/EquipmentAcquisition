@@ -67,6 +67,16 @@ instead. The rest of the sidebar's routes (Asset Registry, Department
 Spend) don't have pages yet, so those menu entries stay inactive rather
 than linking to a 404.
 
+The background-service pattern behind that grid (`CacheRefreshQueue` +
+`DetailCacheRefreshWorker` polling it on a timer) isn't inherently tied to
+display — it's a general staging queue for "something needs to happen
+asynchronously, after this write." Today the only consumer refreshes a
+read cache, but the same shape (enqueue on write, drain on a timer) is a
+natural fit for staging outbound notifications too — e.g. alerting a
+department head when a request needs approval, or flagging one that
+crosses a budget threshold — for both the Acquisition Request display and
+future reports, not just the cache table.
+
 **Resetting to a clean slate:**
 
 ```bash

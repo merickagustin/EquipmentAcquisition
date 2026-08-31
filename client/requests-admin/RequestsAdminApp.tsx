@@ -9,6 +9,7 @@ import {
   IconButton,
   MenuItem,
   Paper,
+  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -26,6 +27,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { apiClient } from '../shared/apiClient';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
@@ -100,6 +102,7 @@ export function RequestsAdminApp() {
   const [grid, setGrid] = useState<PagedResult<RequestDetailDto> | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -174,11 +177,12 @@ export function RequestsAdminApp() {
   // The grid reads EquipmentAcquisitionDetailCache, not the base tables — a mutation
   // enqueues a refresh but DetailCacheRefreshWorker only drains that queue every 2s
   // (see table-design.md's orchestration section), so an immediate reload right after
-  // a mutation can still read stale cache. Reload now (often already caught up on a
-  // fast box) and again shortly after to pick up the worker's catch-up pass.
-  const reloadGrid = () => {
+  // a mutation can still read stale cache. Rather than guess at a delay, say so and
+  // let the Refresh button be the retry — honest about the trade-off instead of
+  // masking it with a timer.
+  const notifyAndReload = (message: string) => {
     loadGrid();
-    setTimeout(loadGrid, 2500);
+    setNotice(message);
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -231,7 +235,11 @@ export function RequestsAdminApp() {
         await apiClient.put(`/api/acquisition-requests/${editingId}`, payload);
       }
       setDialogOpen(false);
-      reloadGrid();
+      notifyAndReload(
+        editingId === null
+          ? 'Request created — it can take a few seconds to appear below.'
+          : 'Request updated — it can take a few seconds to reflect below.',
+      );
     } catch (e) {
       setFormError((e as Error).message);
     } finally {
@@ -248,7 +256,7 @@ export function RequestsAdminApp() {
         approvedByEmployeeId: approverId,
       });
       setApproveTarget(null);
-      reloadGrid();
+      notifyAndReload('Request approved — it can take a few seconds to reflect below.');
     } catch (e) {
       setApproveError((e as Error).message);
     } finally {
@@ -265,7 +273,7 @@ export function RequestsAdminApp() {
         rejectionReason: rejectReason,
       });
       setRejectTarget(null);
-      reloadGrid();
+      notifyAndReload('Request rejected — it can take a few seconds to reflect below.');
     } catch (e) {
       setRejectError((e as Error).message);
     } finally {
@@ -280,7 +288,7 @@ export function RequestsAdminApp() {
     try {
       await apiClient.delete(`/api/acquisition-requests/${deleteTarget.acquisitionRequestId}`);
       setDeleteTarget(null);
-      reloadGrid();
+      notifyAndReload('Request deleted — it can take a few seconds to reflect below.');
     } catch (e) {
       setDeleteError((e as Error).message);
     } finally {
@@ -331,7 +339,11 @@ export function RequestsAdminApp() {
         await apiClient.put(`/api/purchase-orders/${poEditingId}`, payload);
       }
       setPoTarget(null);
-      reloadGrid();
+      notifyAndReload(
+        poEditingId === null
+          ? 'Purchase order created — it can take a few seconds to reflect below.'
+          : 'Purchase order updated — it can take a few seconds to reflect below.',
+      );
     } catch (e) {
       setPoError((e as Error).message);
     } finally {
@@ -346,7 +358,7 @@ export function RequestsAdminApp() {
       await apiClient.delete(`/api/purchase-orders/${poEditingId}`);
       setPoDeleteConfirm(false);
       setPoTarget(null);
-      reloadGrid();
+      notifyAndReload('Purchase order removed — it can take a few seconds to reflect below.');
     } catch (e) {
       setPoError((e as Error).message);
     } finally {
@@ -363,9 +375,14 @@ export function RequestsAdminApp() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">Acquisition Requests</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          New Request
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button startIcon={<RefreshIcon />} onClick={loadGrid} disabled={loading}>
+            Refresh
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+            New Request
+          </Button>
+        </Stack>
       </Box>
 
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -742,6 +759,25 @@ export function RequestsAdminApp() {
         onConfirm={confirmPoDelete}
         confirming={poDeleting}
         error={null}
+      />
+
+      <Snackbar
+        open={notice !== null}
+        autoHideDuration={6000}
+        onClose={() => setNotice(null)}
+        message={notice}
+        action={
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => {
+              loadGrid();
+              setNotice(null);
+            }}
+          >
+            Refresh
+          </Button>
+        }
       />
     </Box>
   );

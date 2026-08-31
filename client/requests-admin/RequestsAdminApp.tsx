@@ -176,7 +176,7 @@ export function RequestsAdminApp() {
   // (see table-design.md's orchestration section), so an immediate reload right after
   // a mutation can still read stale cache. Reload now (often already caught up on a
   // fast box) and again shortly after to pick up the worker's catch-up pass.
-  const reloadGridSoon = () => {
+  const reloadGrid = () => {
     loadGrid();
     setTimeout(loadGrid, 2500);
   };
@@ -231,7 +231,7 @@ export function RequestsAdminApp() {
         await apiClient.put(`/api/acquisition-requests/${editingId}`, payload);
       }
       setDialogOpen(false);
-      reloadGridSoon();
+      reloadGrid();
     } catch (e) {
       setFormError((e as Error).message);
     } finally {
@@ -248,7 +248,7 @@ export function RequestsAdminApp() {
         approvedByEmployeeId: approverId,
       });
       setApproveTarget(null);
-      reloadGridSoon();
+      reloadGrid();
     } catch (e) {
       setApproveError((e as Error).message);
     } finally {
@@ -265,7 +265,7 @@ export function RequestsAdminApp() {
         rejectionReason: rejectReason,
       });
       setRejectTarget(null);
-      reloadGridSoon();
+      reloadGrid();
     } catch (e) {
       setRejectError((e as Error).message);
     } finally {
@@ -280,7 +280,7 @@ export function RequestsAdminApp() {
     try {
       await apiClient.delete(`/api/acquisition-requests/${deleteTarget.acquisitionRequestId}`);
       setDeleteTarget(null);
-      reloadGridSoon();
+      reloadGrid();
     } catch (e) {
       setDeleteError((e as Error).message);
     } finally {
@@ -331,7 +331,7 @@ export function RequestsAdminApp() {
         await apiClient.put(`/api/purchase-orders/${poEditingId}`, payload);
       }
       setPoTarget(null);
-      reloadGridSoon();
+      reloadGrid();
     } catch (e) {
       setPoError((e as Error).message);
     } finally {
@@ -346,7 +346,7 @@ export function RequestsAdminApp() {
       await apiClient.delete(`/api/purchase-orders/${poEditingId}`);
       setPoDeleteConfirm(false);
       setPoTarget(null);
-      reloadGridSoon();
+      reloadGrid();
     } catch (e) {
       setPoError((e as Error).message);
     } finally {

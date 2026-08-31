@@ -113,7 +113,7 @@ containerized:
 dotnet test
 ```
 
-Should report `Passed! - Failed: 0, Passed: 19`.
+Should report `Passed! - Failed: 0, Passed: 33`.
 
 ## Local development (without Docker)
 

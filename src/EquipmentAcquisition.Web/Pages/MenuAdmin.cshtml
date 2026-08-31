@@ -1,0 +1,11 @@
+@page "/menu-admin"
+@model EquipmentAcquisition.Web.Pages.MenuAdminModel
+@{
+    ViewData["Title"] = "Menu Admin";
+}
+
+@* content-root is filled by the menu-admin React bundle — nothing server-rendered here. *@
+
+@section Scripts {
+    <script src="~/dist/menu-admin/app.js"></script>
+}

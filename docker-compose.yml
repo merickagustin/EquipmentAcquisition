@@ -1,0 +1,55 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+    ports:
+      # host:container — change only the left number if 1433 is already taken
+      # on your machine (e.g. by a native SQL Server install), then update the
+      # connection string's port to match. The right side (1433) is SQL
+      # Server's own listening port inside the container and shouldn't change.
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: src/EquipmentAcquisition.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      # api -> sqlserver: Docker-internal service name, container port — never the host port.
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=EquipmentAcquisitionDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
+      # Browser -> api's CORS check: the browser only ever sees web's host-mapped port.
+      Cors__WebOrigin: "http://localhost:8090"
+    ports:
+      - "8081:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: src/EquipmentAcquisition.Web/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      # Injected into the page for the browser to call — api's host-mapped port, not its
+      # internal service name, since the browser sits outside the Docker network entirely.
+      PublicApiBaseUrl: "http://localhost:8081"
+    ports:
+      - "8090:8080"
+    depends_on:
+      - api
+
+volumes:
+  sqlserver-data:

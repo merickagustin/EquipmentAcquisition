@@ -1,0 +1,17 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Node / client
+client/node_modules/
+client/dist/
+
+# Test/dev artifacts
+client/verify-screenshot.png
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

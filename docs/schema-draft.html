@@ -1,0 +1,833 @@
+<title>Equipment Acquisition Schema</title>
+<style>
+  :root {
+    --paper: #eef0ec;
+    --paper-raised: #fbfcfa;
+    --ink: #1b2430;
+    --ink-soft: #56626f;
+    --ink-faint: #8b96a1;
+    --line: #cdd3d0;
+    --accent: #2f5d8a;
+    --accent-soft: #e2eaf2;
+    --copper: #a85a26;
+    --copper-soft: #f3e2d2;
+    --mono-bg: #e6e9e3;
+    --radius: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10161f;
+      --paper-raised: #171f2b;
+      --ink: #e4eaf0;
+      --ink-soft: #9aa8b8;
+      --ink-faint: #64758a;
+      --line: #2b3648;
+      --accent: #74acdc;
+      --accent-soft: #1c2c3d;
+      --copper: #e2965a;
+      --copper-soft: #362619;
+      --mono-bg: #1c2531;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #10161f;
+    --paper-raised: #171f2b;
+    --ink: #e4eaf0;
+    --ink-soft: #9aa8b8;
+    --ink-faint: #64758a;
+    --line: #2b3648;
+    --accent: #74acdc;
+    --accent-soft: #1c2c3d;
+    --copper: #e2965a;
+    --copper-soft: #362619;
+    --mono-bg: #1c2531;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3 {
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-weight: 600;
+    text-wrap: balance;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  code, .mono, th, td, .tag {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 720px);
+    gap: 56px;
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { display: none; }
+  }
+
+  nav.toc {
+    position: sticky;
+    top: 40px;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  nav.toc .label {
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  nav.toc a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 3px 0;
+    border-left: 2px solid transparent;
+    padding-left: 10px;
+  }
+
+  nav.toc a:hover, nav.toc a:focus-visible {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    gap: 52px;
+    min-width: 0;
+  }
+
+  header.page-head {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--copper-soft);
+    color: var(--copper);
+    border: 1px solid color-mix(in srgb, var(--copper) 35%, transparent);
+  }
+
+  h1.title { font-size: 34px; }
+
+  .dek {
+    color: var(--ink-soft);
+    max-width: 62ch;
+    font-size: 16px;
+  }
+
+  .stat-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .stat {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 108px;
+  }
+
+  .stat .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .stat .lbl {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  section { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 40px; }
+
+  section h2 {
+    font-size: 21px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  section h2 .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-weight: 400;
+  }
+
+  p { margin: 0; color: var(--ink-soft); max-width: 68ch; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  .diagram-frame {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    overflow-x: auto;
+  }
+
+  svg.erd { width: 100%; height: auto; display: block; min-width: 620px; }
+
+  figcaption {
+    font-size: 13px;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  figcaption .accent-word { color: var(--accent); font-weight: 500; }
+  figcaption .copper-word { color: var(--copper); font-weight: 500; }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .swatch { width: 14px; height: 2px; display: inline-block; }
+  .swatch.neutral { background: var(--ink-faint); }
+  .swatch.accent { background: var(--accent); height: 3px; }
+  .swatch.copper { background: none; border-top: 2px dashed var(--copper); width: 16px; }
+  .swatch.accent-dash { background: none; border-top: 2px dashed var(--accent); width: 16px; }
+
+  .entity-card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .entity-card .card-head {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .entity-card h3 { font-size: 17px; }
+  .entity-card .role {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  table.cols {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  table.cols th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    padding: 10px 18px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  table.cols td {
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    color: var(--ink);
+  }
+
+  table.cols tr:last-child td { border-bottom: none; }
+
+  table.cols td.notes {
+    font-family: "IBM Plex Sans", sans-serif;
+    color: var(--ink-soft);
+    font-size: 12.5px;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-right: 3px;
+    font-weight: 500;
+  }
+  .tag.pk { background: var(--accent-soft); color: var(--accent); }
+  .tag.fk { background: var(--mono-bg); color: var(--ink-soft); }
+  .tag.uq { background: var(--copper-soft); color: var(--copper); }
+
+  .card-foot {
+    padding: 12px 18px 16px;
+    font-size: 12px;
+    color: var(--ink-faint);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .card-foot code { color: var(--ink-soft); }
+
+  .decision {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--copper);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .decision h4 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .decision p { max-width: 66ch; font-size: 13.5px; }
+
+  .decision code {
+    background: var(--mono-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  footer.status {
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+
+  footer.status strong { color: var(--ink-soft); font-weight: 500; }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="layout">
+  <nav class="toc" aria-label="Sections">
+    <div class="label">Contents</div>
+    <a href="#overview">Overview</a>
+    <a href="#diagram">Entity diagram</a>
+    <a href="#department">Department</a>
+    <a href="#category">EquipmentCategory</a>
+    <a href="#vendor">Vendor</a>
+    <a href="#employee">Employee</a>
+    <a href="#request">AcquisitionRequest</a>
+    <a href="#po">PurchaseOrder</a>
+    <a href="#asset">Asset</a>
+    <a href="#detailcache">DetailCache</a>
+    <a href="#menuitem">MenuItem</a>
+    <a href="#decisions">Design decisions</a>
+    <a href="#status">Status</a>
+  </nav>
+
+  <main>
+    <header class="page-head">
+      <div class="eyebrow">Table design <span class="chip">Draft · v4</span></div>
+      <h1 class="title">Equipment Acquisition Schema</h1>
+      <p class="dek">Nine tables for the Equipment Acquisition Recording System — eight base tables plus one denormalized read model — sized for a large organization (25,000 AcquisitionRequest rows, lowered from an original 100k+ target to keep a reviewer's first run reasonable) so the department-spend report needs a real, measurable optimization rather than a LINQ one-liner. Targets SQL Server; one table (MenuItem) is standalone — the full-CRUD React showcase, unconnected to the acquisition domain below.</p>
+      <div class="stat-row">
+        <div class="stat"><span class="num">9</span><span class="lbl">Tables</span></div>
+        <div class="stat"><span class="num">8</span><span class="lbl">Explicit indexes</span></div>
+        <div class="stat"><span class="num">1</span><span class="lbl">Check constraint</span></div>
+        <div class="stat"><span class="num">1</span><span class="lbl">Derived status field</span></div>
+      </div>
+    </header>
+
+    <section id="overview">
+      <h2><span class="num">01</span> Overview</h2>
+      <p>Four reference tables (Department, EquipmentCategory, Vendor, Employee) feed two transactional tables (AcquisitionRequest, PurchaseOrder) that join 1:1 on <code>AcquisitionRequestId</code> — that join is the one the department-spend report aggregates across. Asset sits downstream of PurchaseOrder, and carries an independent relationship back to Department for whichever department currently holds it, separate from whichever department originally requested it. A separate, self-referencing <code>MenuItem</code> table sits outside this domain entirely — it's the one entity with full React CRUD (List/Create/Edit/Delete), while everything else here is exercised through the API only.</p>
+      <p>Alongside those eight sits <code>EquipmentAcquisitionDetailCache</code> — a second standalone table, unconnected to the graph above by any foreign key in either direction. It holds one flat row per request with values copied from Department, EquipmentCategory, both Employees, PurchaseOrder and Vendor, so a detail read is a single-key lookup that joins nothing and computes nothing. It is rebuildable by definition, and deliberately <em>not</em> what the department-spend report reads from.</p>
+    </section>
+
+    <section id="diagram">
+      <h2><span class="num">02</span> Entity diagram</h2>
+      <figure>
+        <div class="diagram-frame">
+          <svg class="erd" viewBox="0 0 970 800" role="img" aria-label="Entity relationship diagram: Department, EquipmentCategory, Vendor and Employee are reference tables. Department also feeds Employee. Department, EquipmentCategory and Employee feed AcquisitionRequest, which joins one-to-one with PurchaseOrder, fed by Vendor. PurchaseOrder feeds Asset, and Asset also links back to Department as current custodian via a separate optional relationship, the same dashed style used for AcquisitionRequest's optional approving-employee link. Below and unconnected to everything else, a dashed accent box marks EquipmentAcquisitionDetailCache, a standalone denormalized read model with no foreign keys in either direction, holding one flat row per request with values copied from Department, EquipmentCategory, both Employee links, PurchaseOrder and Vendor. A standalone MenuItem table sits apart from this domain, self-referencing via an optional ParentId to form a tree, and is the one table with full React CRUD.">
+            <defs>
+              <marker id="arrN" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)"></path>
+              </marker>
+              <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"></path>
+              </marker>
+              <marker id="arrC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--copper)"></path>
+              </marker>
+            </defs>
+
+            <!-- edges: reference row -->
+            <polyline points="210,78 245,78" fill="none" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#arrN)"></polyline>
+            <text x="212" y="70" font-size="10.5" fill="var(--ink-faint)">1─*</text>
+
+            <!-- edges: reference row down to AcquisitionRequest -->
+            <polyline points="125,116 125,200 230,200 230,260" fill="none" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#arrN)"></polyline>
+            <text x="138" y="196" font-size="11" fill="var(--ink-faint)">1─* requests</text>
+
+            <polyline points="330,116 330,260" fill="none" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#arrN)"></polyline>
+            <text x="336" y="200" font-size="11" fill="var(--ink-faint)">1─* requested by</text>
+
+            <polyline points="415,90 430,90 430,260" fill="none" stroke="var(--copper)" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#arrC)"></polyline>
+            <text x="436" y="96" font-size="10.5" fill="var(--copper)">1─* approved by (nullable)</text>
+
+            <polyline points="545,116 545,190 520,190 520,260" fill="none" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#arrN)"></polyline>
+            <text x="552" y="186" font-size="11" fill="var(--ink-faint)">1─*</text>
+
+            <polyline points="785,116 785,196 770,196 770,260" fill="none" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#arrN)"></polyline>
+            <text x="700" y="192" font-size="11" fill="var(--ink-faint)">1─*</text>
+
+            <!-- the report join -->
+            <polyline points="590,330 660,316" fill="none" stroke="var(--accent)" stroke-width="2.4" marker-end="url(#arrA)"></polyline>
+            <text x="592" y="308" font-size="11.5" fill="var(--accent)" font-weight="600">1─1 (report join)</text>
+
+            <!-- PurchaseOrder to Asset -->
+            <polyline points="770,372 770,450 450,450 450,520" fill="none" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#arrN)"></polyline>
+            <text x="580" y="444" font-size="11" fill="var(--ink-faint)">1─*</text>
+
+            <!-- Department to Asset, custodian -->
+            <polyline points="40,78 16,78 16,568 400,568" fill="none" stroke="var(--copper)" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrC)"></polyline>
+            <text x="30" y="582" font-size="11" fill="var(--copper)">1─* current custodian (nullable path)</text>
+
+            <!-- Department -->
+            <g>
+              <rect x="40" y="40" width="170" height="76" rx="8" fill="var(--paper-raised)" stroke="var(--line)"></rect>
+              <text x="54" y="64" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14" fill="var(--ink)">Department</text>
+              <text x="54" y="84" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+              <text x="54" y="100" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--copper)">UQ  Code</text>
+            </g>
+
+            <!-- Employee -->
+            <g>
+              <rect x="245" y="40" width="170" height="76" rx="8" fill="var(--paper-raised)" stroke="var(--line)"></rect>
+              <text x="259" y="64" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14" fill="var(--ink)">Employee</text>
+              <text x="259" y="84" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+              <text x="259" y="100" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">FK  DepartmentId</text>
+            </g>
+
+            <!-- EquipmentCategory -->
+            <g>
+              <rect x="450" y="40" width="190" height="76" rx="8" fill="var(--paper-raised)" stroke="var(--line)"></rect>
+              <text x="464" y="64" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14" fill="var(--ink)">EquipmentCategory</text>
+              <text x="464" y="84" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+              <text x="464" y="100" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--copper)">UQ  Name</text>
+            </g>
+
+            <!-- Vendor -->
+            <g>
+              <rect x="700" y="40" width="170" height="76" rx="8" fill="var(--paper-raised)" stroke="var(--line)"></rect>
+              <text x="714" y="64" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14" fill="var(--ink)">Vendor</text>
+              <text x="714" y="84" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+            </g>
+
+            <!-- AcquisitionRequest -->
+            <g>
+              <rect x="170" y="260" width="420" height="140" rx="8" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1.4"></rect>
+              <text x="186" y="286" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14.5" fill="var(--ink)">AcquisitionRequest</text>
+              <text x="186" y="308" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+              <text x="186" y="326" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">FK  DepartmentId</text>
+              <text x="186" y="344" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">FK  EquipmentCategoryId</text>
+              <text x="186" y="362" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">FK  RequestedByEmployeeId</text>
+              <text x="186" y="380" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--copper)">FK  ApprovedByEmployeeId  (nullable)</text>
+            </g>
+
+            <!-- PurchaseOrder -->
+            <g>
+              <rect x="660" y="260" width="220" height="112" rx="8" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1.4"></rect>
+              <text x="676" y="286" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14.5" fill="var(--ink)">PurchaseOrder</text>
+              <text x="676" y="308" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+              <text x="676" y="326" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--copper)">FK  AcquisitionRequestId  UQ</text>
+              <text x="676" y="344" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">FK  VendorId</text>
+              <text x="676" y="362" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-faint)">TotalCost ← stored, not computed</text>
+            </g>
+
+            <!-- Asset -->
+            <g>
+              <rect x="400" y="520" width="220" height="96" rx="8" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1.4"></rect>
+              <text x="416" y="546" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14.5" fill="var(--ink)">Asset</text>
+              <text x="416" y="568" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+              <text x="416" y="586" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">FK  PurchaseOrderId</text>
+              <text x="416" y="604" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">FK  DepartmentId</text>
+            </g>
+
+            <!-- MenuItem — standalone, self-referencing -->
+            <text x="690" y="500" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--copper)" letter-spacing="0.03em">STANDALONE · REACT CRUD</text>
+            <g>
+              <rect x="690" y="510" width="240" height="120" rx="8" fill="var(--paper-raised)" stroke="var(--copper)" stroke-width="1.3" stroke-dasharray="6 3"></rect>
+              <text x="706" y="536" font-family="IBM Plex Serif, serif" font-weight="600" font-size="14.5" fill="var(--ink)">MenuItem</text>
+              <text x="706" y="558" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  Id</text>
+              <text x="706" y="576" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--copper)">FK  ParentId (self, nullable)</text>
+              <text x="706" y="594" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">Label, Route, DisplayOrder</text>
+              <text x="706" y="614" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-faint)">List · Create · Edit · Delete</text>
+            </g>
+            <path d="M 930 550 C 962 550 962 596 930 592" fill="none" stroke="var(--copper)" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#arrC)"></path>
+            <text x="936" y="575" font-size="10" fill="var(--copper)">0─1 parent</text>
+
+            <!-- EquipmentAcquisitionDetailCache — standalone, no relationships -->
+            <text x="60" y="652" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)" letter-spacing="0.03em">STANDALONE · DENORMALIZED READ MODEL</text>
+            <g>
+              <rect x="60" y="660" width="390" height="126" rx="8" fill="var(--paper-raised)" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="6 3"></rect>
+              <text x="76" y="686" font-family="IBM Plex Serif, serif" font-weight="600" font-size="13.5" fill="var(--ink)">EquipmentAcquisitionDetailCache</text>
+              <text x="76" y="708" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent)">PK  AcquisitionRequestId (value, not FK)</text>
+              <text x="76" y="726" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-soft)">Department · Category · Employee ×2</text>
+              <text x="76" y="744" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--copper)">Vendor · PO fields (all nullable)</text>
+              <text x="76" y="762" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-faint)">Status materialized · RefreshedAt</text>
+              <text x="76" y="778" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-faint)">no FKs in either direction · no joins to read</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>
+          The <span class="accent-word">highlighted join</span> (AcquisitionRequest ↔ PurchaseOrder) is what the department-spend report aggregates over at 25,000 rows — it's the target of the naive-vs-optimized query pair. <span class="copper-word">Dashed copper</span> marks the two optional (nullable-FK) relationships: the approving employee, and Asset's current custodian. The <span class="accent-word">dashed accent box</span> below draws no edges on purpose — it holds copies of this domain's values, not references to them, so no join reaches it and none leaves it. The report deliberately never reads it.
+        </figcaption>
+        <div class="legend">
+          <span><span class="swatch accent"></span>Report join (1─1)</span>
+          <span><span class="swatch neutral"></span>Ordinary foreign key</span>
+          <span><span class="swatch copper"></span>Optional relationship (nullable FK)</span>
+          <span><span class="swatch accent-dash"></span>DetailCache's dashed border = standalone read model, no FKs</span>
+          <span><span class="swatch copper"></span>MenuItem's dashed border = standalone domain</span>
+        </div>
+      </figure>
+    </section>
+
+    <section id="department">
+      <h2><span class="num">03</span> Department</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>Department</h3><span class="role">Reference table</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>Code</td><td>varchar(10)</td><td><span class="tag uq">UQ</span></td><td class="notes">Short dept code, e.g. "FIN"</td></tr>
+              <tr><td>Name</td><td>varchar(100)</td><td></td><td class="notes"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="category">
+      <h2><span class="num">04</span> EquipmentCategory</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>EquipmentCategory</h3><span class="role">Reference table</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>Name</td><td>varchar(100)</td><td><span class="tag uq">UQ</span></td><td class="notes">"IT Equipment", "Furniture", "Vehicles", "Machinery"</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="vendor">
+      <h2><span class="num">05</span> Vendor</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>Vendor</h3><span class="role">Reference table</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>Name</td><td>varchar(150)</td><td></td><td class="notes"></td></tr>
+              <tr><td>ContactEmail</td><td>varchar</td><td></td><td class="notes">Nullable</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="employee">
+      <h2><span class="num">06</span> Employee</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>Employee</h3><span class="role">Reference table</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>DepartmentId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">→ Department, restrict delete</td></tr>
+              <tr><td>FullName</td><td>varchar(150)</td><td></td><td class="notes"></td></tr>
+              <tr><td>JobTitle</td><td>varchar(100)</td><td></td><td class="notes">Nullable</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot">
+          <div>Minimal on purpose — no auth, no employment status. Wired only into AcquisitionRequest's two employee FKs; Asset's custodian stays department-level.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="request">
+      <h2><span class="num">07</span> AcquisitionRequest</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>AcquisitionRequest</h3><span class="role">Transactional · 25,000 rows</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>DepartmentId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">→ Department, restrict delete</td></tr>
+              <tr><td>EquipmentCategoryId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">→ EquipmentCategory, restrict delete</td></tr>
+              <tr><td>RequestedByEmployeeId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">→ Employee, restrict delete</td></tr>
+              <tr><td>ItemDescription</td><td>varchar</td><td></td><td class="notes"></td></tr>
+              <tr><td>Justification</td><td>varchar</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>Quantity</td><td>int</td><td></td><td class="notes"></td></tr>
+              <tr><td>EstimatedCost</td><td>decimal(18,2)</td><td></td><td class="notes"></td></tr>
+              <tr><td>RequestDate</td><td>datetime</td><td></td><td class="notes">Required</td></tr>
+              <tr><td>ApprovedDate</td><td>datetime</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>RejectedDate</td><td>datetime</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>ApprovedByEmployeeId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">→ Employee, nullable — set only once Approved</td></tr>
+              <tr><td>RejectionReason</td><td>varchar</td><td></td><td class="notes">Nullable</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot">
+          <div>Index: <code>(DepartmentId, EquipmentCategoryId, RequestDate)</code> — covers the report's group-by/filter columns</div>
+          <div>Constraint: <code>CK_AcquisitionRequest_MutuallyExclusiveDates</code> — <code>ApprovedDate IS NULL OR RejectedDate IS NULL</code></div>
+          <div><code>Status</code> is not a column — derived at read time: RejectedDate set → Rejected; ApprovedDate set → Approved; else Pending</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="po">
+      <h2><span class="num">08</span> PurchaseOrder</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>PurchaseOrder</h3><span class="role">Transactional · 14,966 rows (Approved subset, measured)</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>AcquisitionRequestId</td><td>int</td><td><span class="tag fk">FK</span> <span class="tag uq">UQ</span></td><td class="notes">1:1 with AcquisitionRequest</td></tr>
+              <tr><td>VendorId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">→ Vendor, restrict delete</td></tr>
+              <tr><td>PoNumber</td><td>varchar</td><td><span class="tag uq">UQ</span></td><td class="notes">e.g. "PO-2026-000123"</td></tr>
+              <tr><td>Quantity</td><td>int</td><td></td><td class="notes"></td></tr>
+              <tr><td>UnitCost</td><td>decimal(18,2)</td><td></td><td class="notes"></td></tr>
+              <tr><td>TotalCost</td><td>decimal(18,2)</td><td></td><td class="notes">Stored, not computed on read</td></tr>
+              <tr><td>OrderDate</td><td>datetime</td><td></td><td class="notes"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="asset">
+      <h2><span class="num">09</span> Asset</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>Asset</h3><span class="role">Transactional · 44,956 rows (derived, avg 3.0/PO, measured)</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>PurchaseOrderId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">→ PurchaseOrder, restrict delete</td></tr>
+              <tr><td>DepartmentId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">Current custodian — can differ from the request's dept</td></tr>
+              <tr><td>AssetTag</td><td>varchar(30)</td><td><span class="tag uq">UQ</span></td><td class="notes">e.g. "AST-000001"</td></tr>
+              <tr><td>SerialNumber</td><td>varchar</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>Status</td><td>int (enum)</td><td></td><td class="notes">InStock / Assigned / Maintenance / Retired</td></tr>
+              <tr><td>AcquiredDate</td><td>datetime</td><td></td><td class="notes"></td></tr>
+              <tr><td>LastUpdated</td><td>datetime</td><td></td><td class="notes"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot">
+          <div>Index: <code>(DepartmentId, Status)</code> — supports the Asset Registry grid's filter</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="detailcache">
+      <h2><span class="num">10</span> EquipmentAcquisitionDetailCache</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>EquipmentAcquisitionDetailCache</h3><span class="role">Standalone · denormalized read model</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>AcquisitionRequestId</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">The originating request's id as a <strong>value</strong>, not a reference — no FK. One row per request</td></tr>
+              <tr><td>DepartmentId</td><td>int</td><td></td><td class="notes">Value copy, not a constrained reference</td></tr>
+              <tr><td>DepartmentCode</td><td>varchar(10)</td><td></td><td class="notes">from Department</td></tr>
+              <tr><td>DepartmentName</td><td>varchar(100)</td><td></td><td class="notes">from Department</td></tr>
+              <tr><td>EquipmentCategoryId</td><td>int</td><td></td><td class="notes">Value copy</td></tr>
+              <tr><td>EquipmentCategoryName</td><td>varchar(100)</td><td></td><td class="notes">from EquipmentCategory</td></tr>
+              <tr><td>RequestedByEmployeeId</td><td>int</td><td></td><td class="notes">Value copy</td></tr>
+              <tr><td>RequestedByName</td><td>varchar(150)</td><td></td><td class="notes">from Employee</td></tr>
+              <tr><td>RequestedByJobTitle</td><td>varchar(100)</td><td></td><td class="notes">Nullable, from Employee</td></tr>
+              <tr><td>ApprovedByEmployeeId</td><td>int</td><td></td><td class="notes">Nullable, value copy</td></tr>
+              <tr><td>ApprovedByName</td><td>varchar(150)</td><td></td><td class="notes">Nullable, from Employee</td></tr>
+              <tr><td>ItemDescription</td><td>varchar</td><td></td><td class="notes">from AcquisitionRequest</td></tr>
+              <tr><td>Quantity</td><td>int</td><td></td><td class="notes"></td></tr>
+              <tr><td>EstimatedCost</td><td>decimal(18,2)</td><td></td><td class="notes"></td></tr>
+              <tr><td>RequestDate</td><td>datetime</td><td></td><td class="notes"></td></tr>
+              <tr><td>ApprovedDate</td><td>datetime</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>RejectedDate</td><td>datetime</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>Status</td><td>tinyint</td><td></td><td class="notes"><strong>Materialized</strong> here, derived everywhere else — see the tension below</td></tr>
+              <tr><td>PurchaseOrderId</td><td>int</td><td></td><td class="notes">Nullable — null until the request becomes a PO</td></tr>
+              <tr><td>PoNumber</td><td>varchar</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>VendorId</td><td>int</td><td></td><td class="notes">Nullable, value copy</td></tr>
+              <tr><td>VendorName</td><td>varchar(150)</td><td></td><td class="notes">Nullable, from Vendor</td></tr>
+              <tr><td>UnitCost</td><td>decimal(18,2)</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>TotalCost</td><td>decimal(18,2)</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>OrderDate</td><td>datetime</td><td></td><td class="notes">Nullable</td></tr>
+              <tr><td>RefreshedAt</td><td>datetime</td><td></td><td class="notes">When this row was last rebuilt — staleness is visible, not guessed</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot">
+          <div>Index: <code>(DepartmentId, Status, RequestDate)</code> — the request grid's filter and sort; the detail read needs no index beyond the PK</div>
+          <div>Everything downstream of PurchaseOrder is nullable by necessity — a pending or rejected request never gets a PO, so Vendor's values are absent until one exists</div>
+          <div><strong>No foreign keys in either direction</strong> — every <code>*Id</code> is a value copy, so reads do no joins and writes to the base tables pay no constraint-checking cost</div>
+          <div>Consequence: nothing at the DB level keeps this consistent with its sources. Orphans and staleness are the orchestration layer's problem — resolved via a queue table + background worker, full spec in <code>table-design.md</code></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="menuitem">
+      <h2><span class="num">11</span> MenuItem</h2>
+      <div class="entity-card">
+        <div class="card-head"><h3>MenuItem</h3><span class="role">Standalone · React CRUD target</span></div>
+        <div class="table-scroll">
+          <table class="cols">
+            <thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Id</td><td>int</td><td><span class="tag pk">PK</span></td><td class="notes">Identity</td></tr>
+              <tr><td>ParentId</td><td>int</td><td><span class="tag fk">FK</span></td><td class="notes">Self-referencing → MenuItem.Id, nullable — null = top-level</td></tr>
+              <tr><td>Label</td><td>varchar(100)</td><td></td><td class="notes"></td></tr>
+              <tr><td>Route</td><td>varchar(200)</td><td></td><td class="notes">e.g. "/requests", "/assets", "/reports"</td></tr>
+              <tr><td>DisplayOrder</td><td>int</td><td></td><td class="notes"></td></tr>
+              <tr><td>IsActive</td><td>bit</td><td></td><td class="notes"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot">
+          <div>Index: <code>(ParentId, DisplayOrder)</code> — orders siblings under the same parent</div>
+          <div>Delete is Restrict by necessity, not choice — SQL Server rejects a cascade path on a self-join</div>
+          <div>No FK to any other table here — this is the isolated full-CRUD showcase; everything else in this schema is API-only</div>
+          <div>Seed: five top-level menus — Home, Acquisitions, Assets, Reports, Administration — 12 rows, two levels deep. Full table in <code>table-design.md</code></div>
+          <div><code>Route</code> must become <strong>nullable</strong> for the four group-header rows, which expand rather than navigate — open, and blocking the seed</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <h2><span class="num">12</span> Design decisions</h2>
+      <div class="decision">
+        <h4>Frontend scope: React CRUD on MenuItem only</h4>
+        <p>The frontend is React + Material UI, built as separate per-page bundles (Webpack, multiple entries) rather than one SPA — a <code>nav</code> bundle rendering the dynamic menu, and a <code>menu-admin</code> bundle for full List/Create/Edit/Delete on <code>MenuItem</code>. It replaces a real legacy pattern — a hardcoded <code>Web.sitemap</code> + <code>asp:Menu</code>, each page loading its own <code>app.js</code> — with a menu that's data, using the same one-bundle-per-page shape. Every other table here (requests, assets, the report) is exercised through the API and Swagger, not a React page.</p>
+      </div>
+      <div class="decision">
+        <h4>The detail cache backs reads, and never the report</h4>
+        <p><code>EquipmentAcquisitionDetailCache</code> flattens five tables into one row per request so detail and grid reads don't re-join them at 25,000 rows. Two rules keep it honest. First, it is <strong>write-only from the refresh path and read-only everywhere else</strong> — no business logic branches on a cached value, so a stale row degrades a display, never a decision. Second, the <strong>department-spend report does not touch it</strong>: pointing the report at a precomputed table would quietly replace the measured naive-vs-optimized story with "I precomputed it," which is the one thing the assessment is actually scoring. The base tables plus the composite index remain the report's path.</p>
+      </div>
+      <div class="decision">
+        <h4>The cache stores Status, contradicting the table above it — knowingly</h4>
+        <p><code>AcquisitionRequest.Status</code> is deliberately derived rather than stored, on the grounds that a stored copy can drift. The cache stores it anyway, because a projection that still needs a <code>CASE</code> over two date columns on every read has given back part of what it was built for. The contradiction is accepted rather than resolved, and bounded by the read-only rule above. Worth removing if the refresh path proves harder to keep correct than the <code>CASE</code> was to compute — that trade is the whole argument.</p>
+      </div>
+      <div class="decision">
+        <h4>Standalone: value copies, and not one foreign key</h4>
+        <p>Every <code>*Id</code> on the cache — <code>AcquisitionRequestId</code> included — is a plain column, not a reference. Real FKs would point <code>Restrict</code> delete paths from six directions into a table whose defining property is that it can be truncated and rebuilt, and would make every write to the base tables pay constraint-checking cost that this table exists to avoid. The reading side is the whole argument: a detail view becomes one key lookup returning one row, with no join, no aggregate and no <code>CASE</code> — the work happens once at refresh time instead of on every read.</p>
+        <p>What that costs: <strong>nothing in the database keeps this table honest.</strong> Delete a request and its cache row survives as an orphan; rename a department and every row naming it goes stale. That is not a gap in the schema — it is the schema deliberately declining a job, and handing it to an orchestration layer built for exactly that: a queue table written in the same transaction as every business write, and a background worker that resolves each signal and rebuilds only the affected rows (full design in <code>table-design.md</code>). <code>RefreshedAt</code> exists so staleness can at least be measured rather than assumed.</p>
+      </div>
+      <div class="decision">
+        <h4>Employee is intentionally minimal</h4>
+        <p>Just <code>Id</code>, <code>DepartmentId</code>, <code>FullName</code>, <code>JobTitle</code> — no auth, no employment status. It exists to replace the earlier plain <code>RequestedBy</code> string with a real relationship, wired only into AcquisitionRequest's two employee FKs. Asset's custodian deliberately stays at the department level rather than also gaining an Employee FK — that's a separate decision this project doesn't need to make.</p>
+      </div>
+      <div class="decision">
+        <h4>AcquisitionRequest.Status is derived, not stored</h4>
+        <p>Computed from <code>ApprovedDate</code>/<code>RejectedDate</code> rather than kept as its own column — one less field that can drift out of sync with the dates that actually drove the state change.</p>
+      </div>
+      <div class="decision">
+        <h4>Asset.Status stays a real column</h4>
+        <p>Unlike the request, an asset's lifecycle isn't one-way — it can cycle Assigned → Maintenance → Assigned more than once, which a set of nullable "state date" columns can't represent cleanly. Dates work for a linear flow; an enum for a cyclical one.</p>
+      </div>
+      <div class="decision">
+        <h4>PurchaseOrder.TotalCost is stored, not computed on read</h4>
+        <p>At 25,000 rows, the report sums cost across every matching row. Storing <code>Quantity × UnitCost</code> at write time avoids a multiply-and-sum over the full row set on every report run — kept in sync in the service layer, not a DB trigger.</p>
+      </div>
+      <div class="decision">
+        <h4>Composite index the naive report query runs without</h4>
+        <p><code>(DepartmentId, EquipmentCategoryId, RequestDate)</code> on AcquisitionRequest. The naive version of the report is deliberately measured before this index exists, so the before/after numbers in the write-up are real, not staged.</p>
+      </div>
+      <div class="decision">
+        <h4>Mutual exclusivity enforced at the DB level</h4>
+        <p><code>CK_AcquisitionRequest_MutuallyExclusiveDates</code> — a request is approved or rejected, never both (confirmed: no reversal case). A check constraint, not just an application-layer guard, so the rule holds regardless of which code path writes the row.</p>
+      </div>
+    </section>
+
+    <footer class="status" id="status">
+      <div><strong>Status:</strong> schema confirmed — SQL Server via Docker, Employee added, MenuItem added, EquipmentAcquisitionDetailCache added as a read model, frontend set to React + MUI (multi-bundle) with CRUD scoped to MenuItem only.</div>
+      <div><strong>Next:</strong> build the cache orchestration objects (design resolved — see table-design.md), then the Bogus seeding script and the hand-authored MenuItem seed.</div>
+    </footer>
+  </main>
+</div>

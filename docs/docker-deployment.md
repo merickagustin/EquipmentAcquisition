@@ -55,14 +55,18 @@ end, automatic-on-startup is the right amount of ceremony.
 
 ## First-run wait — pull before reading, not after
 
-`mcr.microsoft.com/mssql/server` is ~1.5–2GB with no smaller/slim variant
-(SQL Server's engine doesn't run on musl libc, so there's no Alpine build
-to switch to) — this is inherent to running *real* SQL Server in a
-container, the whole reason Docker was chosen over LocalDB in the first
-place (see `database-setup.md`). That pull is a genuine one-time cost on
-any machine that hasn't run this stack before, reviewers included, and
-nothing in the seeding design touches it — it happens before a single row
-gets seeded.
+`mcr.microsoft.com/mssql/server` is ~625MB compressed with no smaller/slim
+variant (SQL Server's engine doesn't run on musl libc, so there's no
+Alpine build to switch to) — this is inherent to running *real* SQL
+Server in a container, the whole reason Docker was chosen over LocalDB in
+the first place (see `database-setup.md`). That pull is a genuine
+one-time cost on any machine that hasn't run this stack before, reviewers
+included, and nothing in the seeding design touches it — it happens
+before a single row gets seeded. Measured directly (a clean-slate
+`docker compose down -v --rmi all` followed by `up --build`, not a guess):
+**10–20+ minutes** on a slow or congested connection. The terminal looks
+stalled during this — it isn't; `docker ps`/`docker images` from a second
+terminal shows layers still downloading.
 
 The README's first instruction should be `docker compose pull &` (or
 `docker compose up -d`, same effect), run **before** anything else —

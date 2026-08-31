@@ -26,10 +26,16 @@ app, all wired together:
 docker compose up --build
 ```
 
-First run pulls/builds several images (SQL Server itself is ~1.5–2GB,
-plus the .NET SDK/runtime and Node base images) — kick this off before
-doing anything else so it runs in the background while you read the rest
-of this file. Cached after the first run, so this cost is paid once.
+**First run pulls/builds several images — kick this off before doing
+anything else,** ideally before reading the rest of this file, since it
+runs in the background while you read. The SQL Server image alone is the
+long pole: ~625MB compressed, and on a slow or congested connection the
+pull can take **10–20+ minutes** — measured directly on this machine, not
+a guess. A stalled-looking terminal during this step is normal, not a
+hang; `docker images` / `docker ps` from another terminal will show
+partial layers still downloading. Everything (SQL Server, the .NET
+SDK/runtime, and Node base images) is cached after the first run, so this
+cost is paid exactly once.
 
 | Service | Reachable at | Notes |
 |---|---|---|

@@ -27,6 +27,12 @@ public class PurchaseOrdersController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PurchaseOrderDto>> GetById(int id) => Ok(await _service.GetByIdAsync(id));
 
+    // Backs the Create dialog's request picker — Approved, no PO yet, capped at 100,
+    // most recent first. See PurchaseOrderRepository.GetApprovedWithoutPurchaseOrderAsync.
+    [HttpGet("eligible-requests")]
+    public async Task<ActionResult<List<EligibleRequestDto>>> GetEligibleRequests() =>
+        Ok(await _service.GetEligibleRequestsAsync());
+
     // Null (not 404) when the request has no PO yet — this is a normal state for
     // an Approved request, not an error. Lets the Requests page check "does this
     // row already have a PO?" without ever fetching the full PurchaseOrders table.

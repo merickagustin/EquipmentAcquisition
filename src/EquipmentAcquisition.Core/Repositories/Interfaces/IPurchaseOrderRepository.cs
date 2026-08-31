@@ -13,6 +13,7 @@ public interface IPurchaseOrderRepository
     Task UpdateAsync(PurchaseOrder purchaseOrder);
     Task DeleteAsync(PurchaseOrder purchaseOrder);
     Task<AcquisitionRequest?> GetRequestAsync(int acquisitionRequestId);
+    Task<List<EligibleRequestDto>> GetApprovedWithoutPurchaseOrderAsync();
     Task<bool> VendorExistsAsync(int vendorId);
     Task<bool> RequestAlreadyHasPurchaseOrderAsync(int acquisitionRequestId);
     Task<bool> HasAssetsAsync(int purchaseOrderId);

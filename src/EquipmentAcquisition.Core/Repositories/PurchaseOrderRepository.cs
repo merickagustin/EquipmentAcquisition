@@ -64,6 +64,22 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
     public Task<AcquisitionRequest?> GetRequestAsync(int acquisitionRequestId) =>
         _context.AcquisitionRequests.FirstOrDefaultAsync(r => r.Id == acquisitionRequestId && !r.IsDeleted);
 
+    // Backs the Create-PO dropdown — capped and sorted most-recently-approved-first,
+    // not a full scan. In practice this stays small: the seeder gives every Approved
+    // request a PO already, so only genuinely new approvals ever show up here.
+    // Projected straight to the DTO (Department/RequestedByEmployee joined in one
+    // query) — the dropdown label needs to identify the item unambiguously, not
+    // just carry an id.
+    public Task<List<EligibleRequestDto>> GetApprovedWithoutPurchaseOrderAsync() =>
+        _context.AcquisitionRequests.AsNoTracking()
+            .Where(r => !r.IsDeleted && r.ApprovedDate != null && r.PurchaseOrder == null)
+            .OrderByDescending(r => r.ApprovedDate)
+            .Take(100)
+            .Select(r => new EligibleRequestDto(
+                r.Id, r.ItemDescription, r.Department.Name, r.RequestedByEmployee.FullName,
+                r.Quantity, r.EstimatedCost, r.ApprovedDate!.Value))
+            .ToListAsync();
+
     public Task<bool> VendorExistsAsync(int vendorId) =>
         _context.Vendors.AnyAsync(v => v.Id == vendorId);
 

@@ -199,6 +199,18 @@ export interface PurchaseOrderListQuery {
   pageSize?: number;
 }
 
+// Mirrors EquipmentAcquisition.Core.Dtos.EligibleRequestDto — backs the Create
+// Purchase Order dialog's request picker (Approved, no PO yet).
+export interface EligibleRequestDto {
+  id: number;
+  itemDescription: string;
+  departmentName: string;
+  requestedByName: string;
+  quantity: number;
+  estimatedCost: number;
+  approvedDate: string;
+}
+
 // Mirrors EquipmentAcquisition.Domain.Enums.AssetStatus.
 export const AssetStatus = { InStock: 0, Assigned: 1, Maintenance: 2, Retired: 3 } as const;
 export type AssetStatusValue = 0 | 1 | 2 | 3;

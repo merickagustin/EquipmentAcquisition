@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -26,13 +27,18 @@ import { apiClient } from '../shared/apiClient';
 import { ConfirmDialog } from '../shared/components/ConfirmDialog';
 import { FormDialog } from '../shared/components/FormDialog';
 import type {
-  AcquisitionRequestDto,
   CreatePurchaseOrderDto,
+  EligibleRequestDto,
   PagedResult,
   PurchaseOrderDto,
   UpdatePurchaseOrderDto,
   VendorDto,
 } from '../shared/types';
+
+// Full detail, not just "#123" — the whole point of the picker is to make it
+// obvious which real-world item this PO is for before committing to it.
+const eligibleRequestLabel = (r: EligibleRequestDto) =>
+  `#${r.id} — ${r.itemDescription} — ${r.departmentName} — requested by ${r.requestedByName} — qty ${r.quantity} — $${r.estimatedCost.toFixed(2)}`;
 
 const emptyCreateForm = { acquisitionRequestId: 0, vendorId: 0, poNumber: '', quantity: 1, unitCost: 0 };
 const emptyEditForm: UpdatePurchaseOrderDto = { vendorId: 0, quantity: 1, unitCost: 0 };
@@ -58,9 +64,9 @@ export function PurchaseOrdersAdminApp() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const [requestLookup, setRequestLookup] = useState<AcquisitionRequestDto | null>(null);
-  const [requestLookupError, setRequestLookupError] = useState<string | null>(null);
-  const [requestLookingUp, setRequestLookingUp] = useState(false);
+  const [eligibleRequests, setEligibleRequests] = useState<EligibleRequestDto[] | null>(null);
+  const [eligibleError, setEligibleError] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<EligibleRequestDto | null>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<PurchaseOrderDto | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -99,10 +105,15 @@ export function PurchaseOrdersAdminApp() {
   const openCreate = () => {
     setEditingId(null);
     setCreateForm({ ...emptyCreateForm, vendorId: typeof vendorId === 'number' ? vendorId : 0 });
-    setRequestLookup(null);
-    setRequestLookupError(null);
+    setSelectedRequest(null);
     setFormError(null);
     setDialogOpen(true);
+    setEligibleRequests(null);
+    setEligibleError(null);
+    apiClient
+      .get<EligibleRequestDto[]>('/api/purchase-orders/eligible-requests')
+      .then(setEligibleRequests)
+      .catch((e: Error) => setEligibleError(e.message));
   };
 
   const openEdit = (po: PurchaseOrderDto) => {
@@ -110,25 +121,6 @@ export function PurchaseOrdersAdminApp() {
     setEditForm({ vendorId: po.vendorId, quantity: po.quantity, unitCost: po.unitCost });
     setFormError(null);
     setDialogOpen(true);
-  };
-
-  const lookupRequest = async (id: number) => {
-    if (!id) {
-      setRequestLookup(null);
-      setRequestLookupError(null);
-      return;
-    }
-    setRequestLookingUp(true);
-    setRequestLookup(null);
-    setRequestLookupError(null);
-    try {
-      const req = await apiClient.get<AcquisitionRequestDto>(`/api/acquisition-requests/${id}`);
-      setRequestLookup(req);
-    } catch (e) {
-      setRequestLookupError((e as Error).message);
-    } finally {
-      setRequestLookingUp(false);
-    }
   };
 
   const submitForm = async () => {
@@ -289,27 +281,41 @@ export function PurchaseOrdersAdminApp() {
       >
         {editingId === null && (
           <>
-            <TextField
-              type="number"
-              label="Acquisition Request Id"
-              value={createForm.acquisitionRequestId || ''}
-              onChange={(e) => setCreateForm({ ...createForm, acquisitionRequestId: Number(e.target.value) })}
-              onBlur={() => lookupRequest(createForm.acquisitionRequestId)}
-              required
-              autoFocus
-              helperText="Must be an Approved request with no purchase order yet"
+            {eligibleError && <Alert severity="error">{eligibleError}</Alert>}
+            <Autocomplete
+              options={eligibleRequests ?? []}
+              loading={eligibleRequests === null}
+              value={selectedRequest}
+              getOptionLabel={eligibleRequestLabel}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              onChange={(_e, value) => {
+                setSelectedRequest(value);
+                setCreateForm({
+                  ...createForm,
+                  acquisitionRequestId: value?.id ?? 0,
+                  quantity: value?.quantity ?? 1,
+                });
+              }}
+              noOptionsText={eligibleRequests === null ? 'Loading…' : 'No Approved requests without a purchase order'}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Acquisition Request"
+                  required
+                  autoFocus
+                  helperText="Approved requests with no purchase order yet"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {eligibleRequests === null && <CircularProgress size={16} />}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
             />
-            {requestLookingUp && <CircularProgress size={20} />}
-            {requestLookup && (
-              <Alert severity={requestLookup.status === 1 ? 'success' : 'warning'} sx={{ py: 0 }}>
-                {requestLookup.itemDescription} — status {requestLookup.status === 1 ? 'Approved' : 'not Approved'}
-              </Alert>
-            )}
-            {requestLookupError && (
-              <Alert severity="warning" sx={{ py: 0 }}>
-                {requestLookupError}
-              </Alert>
-            )}
             <TextField
               label="PO Number"
               value={createForm.poNumber}

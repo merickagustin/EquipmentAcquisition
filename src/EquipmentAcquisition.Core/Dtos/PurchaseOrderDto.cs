@@ -13,3 +13,11 @@ public record UpdatePurchaseOrderDto(int VendorId, int Quantity, decimal UnitCos
 public record PurchaseOrderListQuery(
     int? VendorId = null, int? AcquisitionRequestId = null,
     int PageNumber = 1, int PageSize = 25);
+
+// Backs the Create dialog's request picker — Approved requests with no PO yet.
+// A projection, not the full AcquisitionRequestDto: enough to render an
+// unambiguous dropdown label (item, department, requester, qty, cost), not an
+// edit form.
+public record EligibleRequestDto(
+    int Id, string ItemDescription, string DepartmentName, string RequestedByName,
+    int Quantity, decimal EstimatedCost, DateTime ApprovedDate);

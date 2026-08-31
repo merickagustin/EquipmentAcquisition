@@ -6,6 +6,7 @@ public interface IPurchaseOrderService
 {
     Task<List<PurchaseOrderDto>> GetAllAsync();
     Task<PagedResult<PurchaseOrderDto>> GetPagedAsync(PurchaseOrderListQuery query);
+    Task<List<EligibleRequestDto>> GetEligibleRequestsAsync();
     Task<PurchaseOrderDto> GetByIdAsync(int id);
     Task<PurchaseOrderDto?> GetByAcquisitionRequestIdAsync(int acquisitionRequestId);
     Task<PurchaseOrderDto> CreateAsync(CreatePurchaseOrderDto dto);

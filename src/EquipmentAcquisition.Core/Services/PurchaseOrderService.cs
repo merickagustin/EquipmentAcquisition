@@ -32,6 +32,9 @@ public class PurchaseOrderService : IPurchaseOrderService
         return new PagedResult<PurchaseOrderDto>(items.Select(ToDto).ToList(), totalCount, query.PageNumber, query.PageSize);
     }
 
+    public Task<List<EligibleRequestDto>> GetEligibleRequestsAsync() =>
+        _purchaseOrders.GetApprovedWithoutPurchaseOrderAsync();
+
     public async Task<PurchaseOrderDto> GetByIdAsync(int id) =>
         ToDto(await GetOrThrowAsync(id));
 

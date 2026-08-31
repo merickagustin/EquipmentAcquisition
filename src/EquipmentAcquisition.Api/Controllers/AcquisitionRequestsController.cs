@@ -49,6 +49,11 @@ public class AcquisitionRequestsController : ControllerBase
     [HttpPost("{id:int}/approve")]
     public async Task<ActionResult<AcquisitionRequestDto>> Approve(int id, ApproveAcquisitionRequestDto dto) => Ok(await _service.ApproveAsync(id, dto));
 
+    /// <summary>All-or-nothing: every id must be Pending or none are approved.</summary>
+    [HttpPost("approve-batch")]
+    public async Task<ActionResult<List<AcquisitionRequestDto>>> ApproveBatch(BatchApproveAcquisitionRequestDto dto) =>
+        Ok(await _service.ApproveBatchAsync(dto));
+
     [HttpPost("{id:int}/reject")]
     public async Task<ActionResult<AcquisitionRequestDto>> Reject(int id, RejectAcquisitionRequestDto dto) => Ok(await _service.RejectAsync(id, dto));
 

@@ -53,6 +53,58 @@ public class AcquisitionRequestServiceTests
     }
 
     [Fact]
+    public async Task ApproveBatchAsync_AllPending_ApprovesAllInOneSave()
+    {
+        var requests = new List<AcquisitionRequest> { PendingRequest(1), PendingRequest(2), PendingRequest(3) };
+        _repository.Setup(r => r.EmployeeExistsAsync(9)).ReturnsAsync(true);
+        _repository.Setup(r => r.GetByIdsAsync(It.Is<int[]>(ids => ids.OrderBy(x => x).SequenceEqual(new[] { 1, 2, 3 }))))
+            .ReturnsAsync(requests);
+
+        var result = await _sut.ApproveBatchAsync(new BatchApproveAcquisitionRequestDto(new[] { 1, 2, 3 }, 9));
+
+        Assert.Equal(3, result.Count);
+        Assert.All(result, r => Assert.Equal(AcquisitionRequestStatus.Approved, r.Status));
+        Assert.All(result, r => Assert.Equal(9, r.ApprovedByEmployeeId));
+        _repository.Verify(r => r.SaveApprovalBatchAsync(
+            It.Is<IEnumerable<AuditTrail>>(rows => rows.Count() == 3),
+            It.Is<IEnumerable<int>>(ids => ids.OrderBy(x => x).SequenceEqual(new[] { 1, 2, 3 }))), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApproveBatchAsync_OneAlreadyApproved_ThrowsConflictException_AndApprovesNone()
+    {
+        var alreadyApproved = PendingRequest(2);
+        alreadyApproved.ApprovedDate = DateTime.UtcNow;
+        alreadyApproved.ApprovedByEmployeeId = 5;
+        var requests = new List<AcquisitionRequest> { PendingRequest(1), alreadyApproved };
+        _repository.Setup(r => r.EmployeeExistsAsync(9)).ReturnsAsync(true);
+        _repository.Setup(r => r.GetByIdsAsync(It.IsAny<int[]>())).ReturnsAsync(requests);
+
+        await Assert.ThrowsAsync<ConflictException>(
+            () => _sut.ApproveBatchAsync(new BatchApproveAcquisitionRequestDto(new[] { 1, 2 }, 9)));
+
+        // Nothing persisted — the whole batch is rejected before any mutation happens.
+        _repository.Verify(r => r.SaveApprovalBatchAsync(It.IsAny<IEnumerable<AuditTrail>>(), It.IsAny<IEnumerable<int>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApproveBatchAsync_MissingId_ThrowsNotFoundException()
+    {
+        _repository.Setup(r => r.EmployeeExistsAsync(9)).ReturnsAsync(true);
+        _repository.Setup(r => r.GetByIdsAsync(It.IsAny<int[]>())).ReturnsAsync(new List<AcquisitionRequest> { PendingRequest(1) });
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _sut.ApproveBatchAsync(new BatchApproveAcquisitionRequestDto(new[] { 1, 99 }, 9)));
+    }
+
+    [Fact]
+    public async Task ApproveBatchAsync_EmptyIds_ThrowsValidationException()
+    {
+        await Assert.ThrowsAsync<ValidationException>(
+            () => _sut.ApproveBatchAsync(new BatchApproveAcquisitionRequestDto(Array.Empty<int>(), 9)));
+    }
+
+    [Fact]
     public async Task RejectAsync_WhenPending_SetsRejectedDateAndReason()
     {
         var request = PendingRequest();

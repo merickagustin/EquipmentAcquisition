@@ -283,16 +283,37 @@ request, not an error.
 
 `purchase-orders-admin` is the second entry point: a standalone paginated
 list at `/purchase-orders`, backed by its own `GET /api/purchase-orders/grid`
-(optional Vendor/AcquisitionRequestId filters — like `AssetListQuery`, not
-`RequestListQuery`, since PurchaseOrders has no multi-join read model or
-mandatory-triad index to protect). Creating one here takes a raw
-Acquisition Request id with the same inline-lookup pattern `assets-admin`
-uses for Purchase Order ids — confirms the request is Approved before you
-commit, since there's no bounded picker list of eligible requests. The two
-pages aren't redundant: `requests-admin`'s action is the fast path while
-you're already looking at a specific request; `purchase-orders-admin` is
-for browsing/filtering POs on their own terms (by vendor, say) without
+(optional Vendor/AcquisitionRequestId/PoNumber filters — like
+`AssetListQuery`, not `RequestListQuery`, since PurchaseOrders has no
+multi-join read model or mandatory-triad index to protect). Creating one
+here picks the request from an `Autocomplete` bound to
+`GET /api/purchase-orders/eligible-requests` — Approved requests with no PO
+yet, capped at 100, each option showing full detail (item, department,
+requester, quantity, cost) so it's unambiguous which request you're
+attaching a PO to. That's a *bounded* picker, which is exactly why
+`assets-admin`'s Purchase Order field can't reuse the same shape: Assets
+picks from all ~15,000 `PurchaseOrders`, not a small Approved-and-unfulfilled
+subset, so it's a debounced (350ms) live-search `Autocomplete` against
+`PoNumber` instead — same full-detail-per-option idea, different mechanism
+because the two pickers are choosing from differently-shaped sets. The two
+PO entry points aren't redundant: `requests-admin`'s action is the fast path
+while you're already looking at a specific request; `purchase-orders-admin`
+is for browsing/filtering POs on their own terms (by vendor, say) without
 first finding the request that spawned each one.
+
+**Approving in bulk reuses the grid, not a new page.** `requests-admin`
+adds a `padding="checkbox"` column when the Status filter is Pending (the
+only status where approval is legal) — a row can only be checked while
+`row.status === Pending`, mirroring the existing per-row Approve/Reject
+icon gating one column over. Selection is deliberately page-local: cleared
+every time `loadGrid` resolves, not just on unmount, so a selection can
+never outlive the rows it was made against (a new page, a changed filter,
+or the post-approval reload all invalidate it the same way). A
+`DoneAllIcon` toolbar button appears only once something's checked,
+opening a `FormDialog` that asks for one approver and submits every
+selected id in a single `POST /api/acquisition-requests/approve-batch` —
+see `table-design.md`'s "Batch approval is atomic" for why that's one
+request and one transaction, not N.
 
 ## Home: reading a MenuItem flag outside the nav
 

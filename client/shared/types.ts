@@ -122,6 +122,12 @@ export interface RejectAcquisitionRequestDto {
   rejectionReason: string;
 }
 
+// All-or-nothing on the server: every id must exist and be Pending, or none are approved.
+export interface BatchApproveAcquisitionRequestDto {
+  requestIds: number[];
+  approvedByEmployeeId: number;
+}
+
 // Mirrors EquipmentAcquisition.Core.Dtos.RequestDetailDto — a grid row, read from
 // EquipmentAcquisitionDetailCache, not the base tables. See table-design.md.
 export interface RequestDetailDto {

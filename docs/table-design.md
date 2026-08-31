@@ -114,6 +114,34 @@ mirrors the flag, the repository enforces it — keeps the refresh procs
 simple (no "should I even insert this row?" branching) and keeps the
 "what's visible" decision in exactly one place.
 
+**Batch approval is atomic, unlike every other write path here.** Every
+other mutation (`CreateAsync`, `ApproveAsync`, `RejectAsync`, `DeleteAsync`)
+does its business-table update, its `AuditTrail` insert, and its
+`CacheRefreshQueue` enqueue as three separate `SaveChangesAsync()` calls —
+accepted for a single row, since a failure between them just leaves one
+row's audit or refresh signal momentarily behind. That tolerance doesn't
+scale to N rows: a 50-row approval that fails partway through, with no
+transaction spanning it, would leave an unpredictable, unannounced subset
+approved. `ApproveBatchAsync` avoids that two ways:
+- **Validates every id before mutating any.** All requested ids must exist
+  (`NotFoundException` otherwise) and all must be Pending
+  (`ConflictException` naming every offending id otherwise) — checked in
+  full before a single field changes, so a stale row (approved by someone
+  else since the grid last loaded) fails the whole batch instead of
+  silently going through partial.
+- **Persists everything in one `SaveChangesAsync()`.** `GetByIdsAsync`
+  returns tracked entities; the service mutates each in memory, builds one
+  `AuditTrail` row per request, and hands both to
+  `SaveApprovalBatchAsync`, which adds the audit rows and the
+  `CacheRefreshQueue` signals directly to the context and saves once — EF
+  Core wraps everything currently tracked (the N request updates included)
+  into that same transaction. N rows, one commit, no partial state
+  possible.
+
+The frontend's selection is deliberately page-local (cleared on every grid
+reload, not "every row matching the filter") — a `TablePagination`-scale
+concern, not a "select all 300" one; see `architecture.md`.
+
 ## PurchaseOrder
 | Column | Type | Notes |
 |---|---|---|

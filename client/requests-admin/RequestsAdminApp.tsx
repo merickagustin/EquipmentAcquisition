@@ -4,6 +4,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   IconButton,
@@ -24,6 +25,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -37,6 +39,7 @@ import {
   acquisitionRequestStatusLabel,
   type AcquisitionRequestDto,
   type AcquisitionRequestStatusValue,
+  type BatchApproveAcquisitionRequestDto,
   type CreateAcquisitionRequestDto,
   type CreatePurchaseOrderDto,
   type DepartmentDto,
@@ -116,6 +119,14 @@ export function RequestsAdminApp() {
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
 
+  // Selection is page-local, not "every row matching the filter" — cleared on
+  // every reload so a stale selection can never outlive the rows it was made against.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [batchApproveOpen, setBatchApproveOpen] = useState(false);
+  const [batchApproverId, setBatchApproverId] = useState<number | null>(null);
+  const [batchApproving, setBatchApproving] = useState(false);
+  const [batchApproveError, setBatchApproveError] = useState<string | null>(null);
+
   const [rejectTarget, setRejectTarget] = useState<RequestDetailDto | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
@@ -170,6 +181,10 @@ export function RequestsAdminApp() {
       .then((data) => {
         setGrid(data);
         setLoadError(null);
+        // Row identities on the page may have shifted (new page, refreshed
+        // statuses) — a carried-over selection could silently point at rows
+        // no longer shown, or worse, no longer Pending.
+        setSelectedIds(new Set());
       })
       .catch((e: Error) => setLoadError(e.message))
       .finally(() => setLoading(false));
@@ -262,6 +277,28 @@ export function RequestsAdminApp() {
       setApproveError((e as Error).message);
     } finally {
       setApproving(false);
+    }
+  };
+
+  const submitBatchApprove = async () => {
+    if (selectedIds.size === 0 || batchApproverId === null) return;
+    setBatchApproving(true);
+    setBatchApproveError(null);
+    try {
+      const payload: BatchApproveAcquisitionRequestDto = {
+        requestIds: Array.from(selectedIds),
+        approvedByEmployeeId: batchApproverId,
+      };
+      await apiClient.post('/api/acquisition-requests/approve-batch', payload);
+      const count = selectedIds.size;
+      setBatchApproveOpen(false);
+      notifyAndReload(`${count} request${count === 1 ? '' : 's'} approved — it can take a few seconds to reflect below.`);
+    } catch (e) {
+      // All-or-nothing on the server — a stale row (already approved/rejected since
+      // this page loaded) fails the whole batch rather than silently skipping it.
+      setBatchApproveError((e as Error).message);
+    } finally {
+      setBatchApproving(false);
     }
   };
 
@@ -378,6 +415,20 @@ export function RequestsAdminApp() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">Acquisition Requests</Typography>
         <Stack direction="row" spacing={1}>
+          {status === AcquisitionRequestStatus.Pending && selectedIds.size > 0 && (
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<DoneAllIcon />}
+              onClick={() => {
+                setBatchApproverId(null);
+                setBatchApproveError(null);
+                setBatchApproveOpen(true);
+              }}
+            >
+              Approve Selected ({selectedIds.size})
+            </Button>
+          )}
           <Button startIcon={<RefreshIcon />} onClick={loadGrid} disabled={loading}>
             Refresh
           </Button>
@@ -444,6 +495,18 @@ export function RequestsAdminApp() {
         <Table size="small">
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                {status === AcquisitionRequestStatus.Pending && (
+                  <Checkbox
+                    size="small"
+                    indeterminate={selectedIds.size > 0 && selectedIds.size < (grid?.items.length ?? 0)}
+                    checked={(grid?.items.length ?? 0) > 0 && selectedIds.size === grid?.items.length}
+                    onChange={(e) =>
+                      setSelectedIds(e.target.checked ? new Set(grid?.items.map((r) => r.acquisitionRequestId)) : new Set())
+                    }
+                  />
+                )}
+              </TableCell>
               <TableCell>Item</TableCell>
               <TableCell>Category</TableCell>
               <TableCell>Requested By</TableCell>
@@ -458,14 +521,14 @@ export function RequestsAdminApp() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={10} align="center">
                   <CircularProgress size={24} />
                 </TableCell>
               </TableRow>
             )}
             {!loading && grid?.items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={10} align="center">
                   No requests match these filters.
                 </TableCell>
               </TableRow>
@@ -473,6 +536,22 @@ export function RequestsAdminApp() {
             {!loading &&
               grid?.items.map((row) => (
                 <TableRow key={row.acquisitionRequestId}>
+                  <TableCell padding="checkbox">
+                    {row.status === AcquisitionRequestStatus.Pending && (
+                      <Checkbox
+                        size="small"
+                        checked={selectedIds.has(row.acquisitionRequestId)}
+                        onChange={(e) =>
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(row.acquisitionRequestId);
+                            else next.delete(row.acquisitionRequestId);
+                            return next;
+                          })
+                        }
+                      />
+                    )}
+                  </TableCell>
                   <TableCell>{row.itemDescription}</TableCell>
                   <TableCell>{row.equipmentCategoryName}</TableCell>
                   <TableCell>{row.requestedByName}</TableCell>
@@ -656,6 +735,28 @@ export function RequestsAdminApp() {
           options={employees}
           getOptionLabel={(e) => e.fullName}
           onChange={(_e, value) => setApproverId(value?.id ?? null)}
+          renderInput={(params) => <TextField {...params} label="Approved By" required autoFocus />}
+        />
+      </FormDialog>
+
+      {/* Batch Approve */}
+      <FormDialog
+        open={batchApproveOpen}
+        title={`Approve ${selectedIds.size} selected request${selectedIds.size === 1 ? '' : 's'}?`}
+        onClose={() => setBatchApproveOpen(false)}
+        onSubmit={submitBatchApprove}
+        submitting={batchApproving}
+        error={batchApproveError}
+        submitLabel="Approve All"
+      >
+        <Typography variant="body2" color="text.secondary">
+          All-or-nothing: if any selected request has changed status since this page
+          loaded, none of them are approved — refresh and try again.
+        </Typography>
+        <Autocomplete
+          options={employees}
+          getOptionLabel={(e) => e.fullName}
+          onChange={(_e, value) => setBatchApproverId(value?.id ?? null)}
           renderInput={(params) => <TextField {...params} label="Approved By" required autoFocus />}
         />
       </FormDialog>

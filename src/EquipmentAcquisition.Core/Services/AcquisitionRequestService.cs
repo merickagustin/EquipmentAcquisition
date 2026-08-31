@@ -101,6 +101,51 @@ public class AcquisitionRequestService : IAcquisitionRequestService
         return ToDto(request);
     }
 
+    // All-or-nothing across the whole batch: every id must exist and be Pending
+    // before anything is mutated, and the actual persistence is one SaveChangesAsync
+    // (via SaveApprovalBatchAsync) covering all N request updates + audit rows +
+    // cache-refresh signals in a single transaction — not N independent ones like
+    // the single-row ApproveAsync above.
+    public async Task<List<AcquisitionRequestDto>> ApproveBatchAsync(BatchApproveAcquisitionRequestDto dto)
+    {
+        if (dto.RequestIds is null || dto.RequestIds.Length == 0)
+            throw new ValidationException("At least one request id is required.");
+        if (!await _requests.EmployeeExistsAsync(dto.ApprovedByEmployeeId))
+            throw new ValidationException($"Employee {dto.ApprovedByEmployeeId} does not exist.");
+
+        var ids = dto.RequestIds.Distinct().ToArray();
+        var requests = await _requests.GetByIdsAsync(ids);
+
+        var missing = ids.Except(requests.Select(r => r.Id)).ToList();
+        if (missing.Count > 0)
+            throw new NotFoundException($"AcquisitionRequest(s) {string.Join(", ", missing)} no longer exist.");
+
+        var notPending = requests.Where(r => r.Status != AcquisitionRequestStatus.Pending).Select(r => r.Id).ToList();
+        if (notPending.Count > 0)
+            throw new ConflictException($"AcquisitionRequest(s) {string.Join(", ", notPending)} are already approved or rejected.");
+
+        var approvedDate = DateTime.UtcNow;
+        var auditRows = new List<AuditTrail>();
+        foreach (var request in requests)
+        {
+            var oldValues = Serialize(request);
+            request.ApprovedDate = approvedDate;
+            request.ApprovedByEmployeeId = dto.ApprovedByEmployeeId;
+            auditRows.Add(new AuditTrail
+            {
+                TableAffected = TableName,
+                AffectedId = request.Id,
+                Action = AuditAction.Update,
+                OldValues = oldValues,
+                NewValues = Serialize(request)
+            });
+        }
+
+        await _requests.SaveApprovalBatchAsync(auditRows, requests.Select(r => r.Id));
+
+        return requests.Select(ToDto).ToList();
+    }
+
     public async Task<AcquisitionRequestDto> RejectAsync(int id, RejectAcquisitionRequestDto dto)
     {
         var request = await GetOrThrowAsync(id);

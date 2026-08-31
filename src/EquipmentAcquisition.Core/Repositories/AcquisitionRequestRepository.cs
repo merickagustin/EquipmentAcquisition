@@ -43,4 +43,14 @@ public class AcquisitionRequestRepository : IAcquisitionRequestRepository
 
     public Task<bool> HasPurchaseOrderAsync(int requestId) =>
         _context.PurchaseOrders.AnyAsync(po => po.AcquisitionRequestId == requestId);
+
+    public Task<List<AcquisitionRequest>> GetByIdsAsync(int[] ids) =>
+        _context.AcquisitionRequests.Where(r => ids.Contains(r.Id) && !r.IsDeleted).ToListAsync();
+
+    public async Task SaveApprovalBatchAsync(IEnumerable<AuditTrail> auditRows, IEnumerable<int> approvedRequestIds)
+    {
+        _context.AuditTrail.AddRange(auditRows);
+        _context.CacheRefreshQueue.AddRange(approvedRequestIds.Select(id => new CacheRefreshQueue { AcquisitionRequestId = id }));
+        await _context.SaveChangesAsync();
+    }
 }

@@ -18,3 +18,6 @@ public record UpdateAcquisitionRequestDto(
 public record ApproveAcquisitionRequestDto(int ApprovedByEmployeeId);
 
 public record RejectAcquisitionRequestDto(string RejectionReason);
+
+// All-or-nothing: every id must exist and be Pending, or none are approved.
+public record BatchApproveAcquisitionRequestDto(int[] RequestIds, int ApprovedByEmployeeId);

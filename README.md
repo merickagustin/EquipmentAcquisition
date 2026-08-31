@@ -25,7 +25,7 @@ its frontend entirely.
 | Database | SQL Server 2022, runs in Docker — no local install needed |
 | Frontend | React 18, TypeScript, Material UI 5 (pinned — see `architecture.md`), Webpack 5 |
 | Seeding | Bogus (fake data), `SqlBulkCopy` for the three high-volume tables |
-| Testing | xUnit + Moq (backend, 33 tests), Playwright (real headless-browser E2E) |
+| Testing | xUnit + Moq (backend, 37 tests), Playwright (real headless-browser E2E) |
 | DevOps | Docker Compose (3 services), Git/GitHub |
 
 Ten independent React bundles (`nav`, `home`, `menu-admin`,
@@ -94,6 +94,14 @@ Order. Deleting a request is a **soft** delete (`IsDeleted`, on both the
 request and its cache row) — it disappears from every view exactly like a
 real delete, but the row and its audit history survive.
 
+Filtering to Pending also turns on a checkbox column — select several
+requests and **Approve Selected** approves all of them in one call. It's
+genuinely all-or-nothing: every id is checked as existing and Pending
+*before* anything is mutated, and the whole batch (every request update,
+audit row, and cache-refresh signal) commits in a single transaction, not
+one per row — a stale row (approved by someone else since the page loaded)
+fails the entire batch instead of silently going through partial.
+
 **Purchase Orders** (`/purchase-orders`, under `Acquisitions`) is a second,
 standalone entry point onto the same data — a paginated list with optional
 Vendor/Acquisition-Request-id filters. Creating one here uses a dropdown of
@@ -140,7 +148,7 @@ containerized:
 dotnet test
 ```
 
-Should report `Passed! - Failed: 0, Passed: 33`.
+Should report `Passed! - Failed: 0, Passed: 37`.
 
 ## Local development (without Docker)
 

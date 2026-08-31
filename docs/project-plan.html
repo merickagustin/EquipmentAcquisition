@@ -356,16 +356,16 @@
 
   <main>
     <header class="page-head">
-      <div class="eyebrow">Project plan <span class="chip">~13.5h scope</span></div>
+      <div class="eyebrow">Project plan <span class="chip">~13.5h original scope, since extended</span></div>
       <h1 class="title">Equipment Acquisition Plan</h1>
-      <p class="dek">A sample app built to demonstrate three things side by side: an optimized SQL Server stored procedure, a layered .NET Web API, and a React + Material UI frontend — for a C#/.NET technical assessment. Everything below is what's confirmed so far and what's left to build.</p>
+      <p class="dek">A sample app built to demonstrate three things side by side: an optimized SQL Server stored procedure, a layered .NET Web API, and a React + Material UI frontend — for a C#/.NET technical assessment. The timeline below is the original plan as scoped; <a href="#status">Status</a> reflects what's actually been built, which has grown past it.</p>
     </header>
 
     <section id="overview">
       <h2><span class="num">01</span> Overview</h2>
       <p>The premise: equipment acquisition tracking for a large organization — requests, approvals, purchase orders, and asset assignment across departments — sized to 25,000 <code>AcquisitionRequest</code> rows so the reporting query needs a real, measurable optimization rather than a LINQ one-liner. Lowered from an original 100k+ target to keep a reviewer's first run reasonable — a deliberate trade against how dramatic the naive-vs-optimized gap will look. Full detail lives in three companion docs, linked under <a href="#resources">Schema &amp; deployment</a>.</p>
       <div class="callout">
-        <strong>Scope boundary, stated once:</strong> only <code>MenuItem</code> gets a full frontend (List/Create/Edit/Delete in React). Every other table — requests, purchase orders, assets, the report — is exercised through the API and Swagger, not a page. This keeps effort weighted toward C#, which is what's actually being scored.
+        <strong>Scope boundary, as originally stated:</strong> only <code>MenuItem</code> would get a full frontend (List/Create/Edit/Delete in React); everything else exercised through Swagger, not a page. That boundary has since moved — see <a href="#status">Status</a> — but the reasoning behind it hasn't: effort stayed weighted toward the backend (schema, the optimized proc, the layered API) first, with the frontend build-out happening only after that foundation was complete and verified.
       </div>
       <p><strong style="color:var(--ink)">Two-phase build, not one atomic push.</strong> Foundation first: schema, seeded data, the stored-proc optimization, the API, tests, and a README — submittable on its own, since it demonstrates all three assessment pillars even without a browser in front of it. Everything past that (the React CRUD, the Web shell, Docker) is the enhancement phase — real, worth finishing, but built <em>on top of</em> a foundation that already stands on its own rather than raced in parallel with it. See <a href="#timeline">Timeline</a>.</p>
     </section>
@@ -487,7 +487,8 @@
     </section>
 
     <section id="timeline">
-      <h2><span class="num">06</span> Timeline — 12 hours</h2>
+      <h2><span class="num">06</span> Timeline — original 12-hour plan</h2>
+      <p>What follows is the plan as originally scoped, kept as-written for the record. It undersells where things actually ended up — see <a href="#status">Status</a> for what's real today, including four admin pages built after this timeline's last row that aren't reflected in it.</p>
 
       <h3 style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--good);display:flex;align-items:center;gap:8px;"><span class="dot done" style="margin-top:0;"></span> Foundation — target ~9h, submission-ready on its own</h3>
       <div class="table-scroll">
@@ -554,19 +555,31 @@
           </ul>
         </div>
         <div class="status-col">
-          <h3 style="color:var(--copper)">Enhancement — after</h3>
+          <h3 style="color:var(--good)">Enhancement — done</h3>
           <ul class="pill-list">
             <li><span class="dot done"></span>Web shell — AppBar + Drawer, nav-root/content-root, dev static file wiring to client/dist</li>
             <li><span class="dot done"></span>React nav + menu-admin bundles — Webpack multi-entry, shared vendor chunk, full CRUD, verified with a real headless-browser test (Playwright), not just reviewed</li>
-            <li><span class="dot next"></span>Docker: Dockerfiles + compose smoke test (api/web services, prod static file wiring)</li>
-            <li><span class="dot next"></span>README v2 with Docker instructions</li>
+            <li><span class="dot done"></span>Docker — Dockerfiles for Api and Web, 3-service compose (sqlserver/api/web), full <code>docker compose up --build</code> verified live, Swagger reachable, migrations apply on startup</li>
+            <li><span class="dot done"></span>README v2 — Docker as its own section, local-dev section, DB access instructions, port-conflict note</li>
           </ul>
         </div>
+      </div>
+
+      <div class="status-col" style="margin-top: 8px;">
+        <h3 style="color:var(--good)">Beyond the original plan</h3>
+        <ul class="pill-list">
+          <li><span class="dot done"></span>Vendors / Departments / Equipment Categories admin pages — same list + shared <code>FormDialog</code> pattern as menu-admin, each its own bundle, each menu entry activated</li>
+          <li><span class="dot done"></span>Acquisition Requests page — paginated/filtered grid reading <code>EquipmentAcquisitionDetailCache</code> directly, approve/reject workflow, inline Purchase Order create/edit/remove on Approved rows</li>
+          <li><span class="dot done"></span><code>GET /api/purchase-orders/by-request/{id}</code> — added to back the inline PO lookup without ever fetching the full PurchaseOrders table (no standalone PO page — see architecture.md's "Acquisition Requests: a second shape")</li>
+          <li><span class="dot done"></span>Two real bugs found and fixed via end-to-end Playwright verification, not caught by code review alone: a date filter binding to midnight, and a UI reload racing the cache-refresh worker's 2s cycle (resolved with an explicit Refresh action + notice, not a timer guess)</li>
+          <li><span class="dot next"></span>Asset Registry page (<code>/assets</code>) — backend CRUD exists, no frontend yet; menu entry stays inactive</li>
+          <li><span class="dot next"></span>Department Spend Report page (<code>/reports/department-spend</code>) — the optimized stored proc is built, measured, and documented; only reachable via Swagger today, no frontend</li>
+        </ul>
       </div>
     </section>
 
     <footer class="status">
-      <strong>Next up:</strong> build the cache orchestration objects — <code>CacheRefreshQueue</code> (id-only, resolved at write time), <code>usp_RefreshAcquisitionDetailCache</code>, <code>usp_RebuildAllAcquisitionDetailCache</code>, <code>DetailCacheRefreshWorker</code> — plus <code>AuditTrail</code> and its write-path wiring, the five <code>EquipmentAcquisitionDetailCache</code> indexes, and the grid's pagination design. All resolved, see <code>table-design.md</code>. Then the <code>SqlBulkCopy</code>-based Bogus seeding script, first item in the Foundation phase above.
+      <strong>Next up:</strong> Asset Registry and the Department Spend Report page are the two remaining sidebar entries without a frontend — both follow patterns already established (simple CRUD for Assets, a filters-plus-table read-only view for the report) rather than needing new architecture.
     </footer>
   </main>
 </div>

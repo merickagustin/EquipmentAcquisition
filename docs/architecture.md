@@ -18,6 +18,12 @@ client/
                              shared MUI components — see inventory below
   nav/                       React+MUI app — the dynamic menu, its own bundle
   menu-admin/                React+MUI app — MenuItem CRUD, its own bundle
+  vendors-admin/              React+MUI app — Vendor CRUD, its own bundle
+  departments-admin/          React+MUI app — Department CRUD, its own bundle
+  equipment-categories-admin/ React+MUI app — EquipmentCategory CRUD, its own bundle
+  requests-admin/              React+MUI app — AcquisitionRequest grid,
+                               approve/reject, inline PurchaseOrder
+                               management, its own bundle
 ```
 
 ## Backend layering: Application and Infrastructure are one project
@@ -85,7 +91,8 @@ its own `app.js` — just with the hardcoded parts replaced by data. It is
     — present on every shell page via a common `_Layout.cshtml`
   - references that page's own bundle, mounted into `<div id="content-root">`
 - Clicking a menu item is a **normal navigation** to that page's URL
-  (`/menu-admin`, later `/requests`, `/assets`, `/reports`) — the browser
+  (`/menu-admin`, `/vendors`, `/departments`, `/equipment-categories`,
+  `/requests`, later `/assets`, `/reports/department-spend`) — the browser
   loads a new shell, which loads that page's own bundle. No client-side
   router deciding what to render; the server decides which shell (and
   therefore which bundle) to serve, same as the old `.aspx`-per-page setup.
@@ -94,11 +101,16 @@ its own `app.js` — just with the hardcoded parts replaced by data. It is
   both mounted into (nav in one div, page content in another) and,
   independently, the MUI theme module they both import from `client/shared`.
 
-This is scoped to two bundles for now, matching "only menus": `nav` (the
-dynamic menu itself) and `menu-admin` (MenuItem CRUD). Additional pages
-(requests, assets, the report) would each get their own bundle later,
-following the same pattern — nothing about the architecture is specific
-to menus, that's just the one slice being built.
+Six bundles exist today: `nav` (the dynamic menu itself), `menu-admin`
+(MenuItem CRUD), `vendors-admin` / `departments-admin` /
+`equipment-categories-admin` (reference-data CRUD, same list+dialog shape
+as `menu-admin` minus the tree), and `requests-admin` (a paginated,
+filtered grid over `AcquisitionRequest` with an approve/reject workflow
+and inline `PurchaseOrder` management — see "Acquisition Requests: a
+second shape" below). Asset Registry and the department-spend report
+would each get their own bundle later, following the same pattern —
+nothing about the architecture is specific to any one entity, that's just
+what hasn't been built yet.
 
 ## Build: Webpack, multiple entries
 
@@ -107,18 +119,26 @@ uses Vite) — Webpack is what the real legacy React frontend was actually
 built with, so the tooling itself is part of the parallel being drawn.
 
 ```js
-// webpack.config.js
+// webpack.config.js — see the file itself for the full, current entry list
 module.exports = {
   entry: {
-    nav: './client/nav/index.tsx',
-    'menu-admin': './client/menu-admin/index.tsx',
+    nav: './nav/index.tsx',
+    'menu-admin': './menu-admin/index.tsx',
+    // 'vendors-admin', 'departments-admin', 'equipment-categories-admin',
+    // 'requests-admin' follow the same one-entry-per-page pattern. Named
+    // *-admin, not e.g. 'vendors' — an entry named 'vendors' would collide
+    // with the splitChunks cacheGroup below, which already emits vendors/app.js.
   },
   output: {
     filename: '[name]/app.js',
     path: path.resolve(__dirname, 'dist'),   // client/dist — see note below on why not straight into wwwroot
   },
   optimization: {
-    splitChunks: { chunks: 'all' }, // shared React/MUI vendor chunk across bundles
+    // A single, deterministically-named vendor chunk (not per-entry auto-hashed
+    // names) — Razor references it with a plain <script> tag, no manifest needed.
+    splitChunks: {
+      cacheGroups: { vendors: { test: /[\\/]node_modules[\\/]/, name: 'vendors', chunks: 'all' } },
+    },
   },
 };
 ```
@@ -191,9 +211,63 @@ thing that does the job, not the most visually elaborate one.
 header"), Parent (dropdown of existing items, "— top level —" as the null
 option), Display Order (number), Active (checkbox).
 
+**`vendors-admin` / `departments-admin` / `equipment-categories-admin`** —
+the same plain-`Table` + `FormDialog` + `ConfirmDialog` shape as
+`menu-admin`, minus the tree: no indentation, no parent picker, since
+these are flat reference data. Proof that the pattern generalizes with
+no changes to the shared components themselves — only the fields inside
+`FormDialog`'s children differ per entity.
+
+**`requests-admin`** is a different shape, not a fourth copy of the same
+pattern — see "Acquisition Requests: a second shape" below.
+
 **Theme** — a standard MUI palette (blue primary, light background,
 default Roboto typography), no custom branding. This is a portfolio
 piece demonstrating the architecture, not a themed product.
+
+## Acquisition Requests: a second shape
+
+`requests-admin` earns its own section because it isn't just "another
+`FormDialog` consumer" — it reads through a different data path and
+carries real async-consistency behavior that the reference-data pages
+don't have to deal with.
+
+**It reads the cache, not the base table.** The list is
+`GET /api/acquisition-requests/grid`, backed by
+`EquipmentAcquisitionDetailCache` (see `table-design.md`), not
+`AcquisitionRequests` directly. `DepartmentId`, `Status`, and a `From`/`To`
+date range are mandatory query parameters — they match the cache's
+mandatory composite index, and the API rejects a request missing any of
+them with a `400` rather than silently defaulting into a bad query
+(`RequestListQuery`'s fields are nullable specifically so "not supplied"
+is distinguishable from "supplied as zero/default").
+
+**Mutations don't reflect immediately.** A write lands in the real table
+at once, but the cache only catches up when `DetailCacheRefreshWorker`
+drains its queue — up to ~2 seconds later (see `table-design.md`'s
+orchestration section). Rather than guess at a delay with a timer, the UI
+says so: every mutation (create/edit, approve, reject, delete, purchase
+order create/edit/remove) shows a `Snackbar` notice — *"Request created —
+it can take a few seconds to appear below."* — with its own Refresh
+action, plus a persistent Refresh button in the page header. The delay is
+disclosed, not masked.
+
+**Purchase Orders have no page of their own.** `PurchaseOrder` has a
+unique FK on `AcquisitionRequestId` — 1:0-or-1, enforced at the DB level
+— and the table holds on the order of 15,000 rows with no natural browse
+entry point (you don't page through purchase orders, you look at *the*
+purchase order for a specific approved request, if it has one). A flat
+list page would mean fetching the whole table for no benefit. Instead, an
+Approved request's row grows a shopping-cart action that opens a
+`FormDialog` for creating, editing, or removing its linked PO. That
+dialog needs the PO's own id and full field set, which the grid row
+doesn't carry (it only has `VendorName`/`TotalCost`, enough to render the
+column, not enough to edit) — so opening the dialog calls
+`GET /api/purchase-orders/by-request/{acquisitionRequestId}`, a lookup
+added specifically to back this without ever fetching the full
+`PurchaseOrders` table. It returns `200` with a `null` body when no PO
+exists yet, not `404` — that's a normal state for an Approved request,
+not an error.
 
 ## Shared theme, independent apps
 
@@ -231,15 +305,17 @@ client/shared/
     ConfirmDialog.tsx        destructive confirm — deletes
 ```
 
-**What is actually shared today, and what is an investment.** `theme.ts`,
-`types.ts`, `apiClient.ts` and `menuTree.ts` are used by *both* bundles
-right now — `nav` builds the tree to render it, `menu-admin` uses the same
-depth calculation to indent its grid, and both fetch `MenuItemDto` through
-the same client. The two dialogs are used by `menu-admin` only, since
-`nav` opens nothing. They are shared for the pages that don't exist yet
-(requests, assets, vendors), which is a deliberate bet on this
-architecture being extended, not a saving being realised now. Worth about
-half an hour, not more.
+**What started as an investment has since paid off.** `theme.ts`,
+`apiClient.ts`, and `types.ts` are used by all six bundles; `menuTree.ts`'s
+tree-building is used by `nav` and `menu-admin` specifically (the
+reference-data and requests pages are flat lists, no tree to build).
+`FormDialog` and `ConfirmDialog`, originally written for `menu-admin`
+alone with no second consumer yet, are now used by every admin bundle —
+`vendors-admin`, `departments-admin`, `equipment-categories-admin`, and
+`requests-admin` (five separate forms: create/edit request, approve,
+reject, and the purchase-order dialog) all render the same two
+components. Nothing in `FormDialog.tsx` or `ConfirmDialog.tsx` changed to
+make that possible — the contract held.
 
 **`FormDialog` standardises three things**, and the third is the one that
 usually gets missed:
@@ -301,10 +377,15 @@ instance shape, differing only in `title`, initial field values, and
 </FormDialog>
 ```
 
-Any future form (`Vendor` edit, `Department` edit, whichever page gets
-built next) plugs into this exact same `FormDialog` — new fields as
-children, a new `onSubmit`, nothing else changes. That reuse is the whole
-point of the half-hour investment noted above.
+Every other admin form plugs into this exact same `FormDialog` the same
+way — new fields as children, a new `onSubmit`, nothing else changes.
+`VendorsAdminApp`, `DepartmentsAdminApp`, and `EquipmentCategoriesAdminApp`
+each render it with a two- or three-field form; `RequestsAdminApp` renders
+it five separate times (create/edit, approve, reject, purchase order)
+with entirely different field sets, including an `Autocomplete` for
+employee pickers instead of a plain `TextField`. None of that required
+touching `FormDialog.tsx` itself. Any future page (Asset Registry, say)
+plugs in the same way.
 
 `splitChunks: { chunks: 'all' }` (above) already emits these into a common
 chunk, so a module imported by both bundles is downloaded once. No extra

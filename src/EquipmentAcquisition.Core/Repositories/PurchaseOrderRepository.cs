@@ -25,6 +25,8 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
             filtered = filtered.Where(po => po.VendorId == query.VendorId);
         if (query.AcquisitionRequestId is not null)
             filtered = filtered.Where(po => po.AcquisitionRequestId == query.AcquisitionRequestId);
+        if (!string.IsNullOrWhiteSpace(query.PoNumber))
+            filtered = filtered.Where(po => po.PoNumber.Contains(query.PoNumber));
 
         var totalCount = await filtered.CountAsync();
         var items = await filtered

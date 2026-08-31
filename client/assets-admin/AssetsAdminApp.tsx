@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -36,6 +37,7 @@ import {
   type PagedResult,
   type PurchaseOrderDto,
   type UpdateAssetDto,
+  type VendorDto,
 } from '../shared/types';
 
 const emptyCreateForm: CreateAssetDto = {
@@ -53,10 +55,17 @@ const statusChipColor: Record<AssetStatusValue, 'default' | 'primary' | 'warning
   3: 'error',
 };
 
+// Full detail, not just a bare PO number — same reasoning as the eligible-requests
+// picker on the Purchase Orders page: identify the real thing before committing.
+const poOptionLabel = (po: PurchaseOrderDto, vendorName: (id: number) => string) =>
+  `${po.poNumber} — ${vendorName(po.vendorId)} — qty ${po.quantity} — $${po.totalCost.toFixed(2)}`;
+
 export function AssetsAdminApp() {
   const [departments, setDepartments] = useState<DepartmentDto[] | null>(null);
+  const [vendors, setVendors] = useState<VendorDto[] | null>(null);
   const [refDataError, setRefDataError] = useState<string | null>(null);
   const departmentName = (id: number) => departments?.find((d) => d.id === id)?.name ?? `#${id}`;
+  const vendorName = (id: number) => vendors?.find((v) => v.id === id)?.name ?? `#${id}`;
 
   const [departmentId, setDepartmentId] = useState<number | ''>('');
   const [status, setStatus] = useState<AssetStatusValue | ''>('');
@@ -74,13 +83,24 @@ export function AssetsAdminApp() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const [poLookup, setPoLookup] = useState<PurchaseOrderDto | null>(null);
-  const [poLookupError, setPoLookupError] = useState<string | null>(null);
-  const [poLookingUp, setPoLookingUp] = useState(false);
+  // Live search, not a fixed dropdown — PurchaseOrders has ~15k rows with no
+  // bounded "eligible" subset the way Approved-without-a-PO requests had, so
+  // there's no reasonable full list to preload. Debounced fetch as the user types.
+  const [poOptions, setPoOptions] = useState<PurchaseOrderDto[]>([]);
+  const [poSearching, setPoSearching] = useState(false);
+  const [selectedPo, setSelectedPo] = useState<PurchaseOrderDto | null>(null);
+  const poSearchTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const [deleteTarget, setDeleteTarget] = useState<AssetDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient.get<VendorDto[]>('/api/vendors').catch((e: Error) => {
+      setRefDataError(e.message);
+      return null;
+    }).then((v) => v && setVendors(v));
+  }, []);
 
   useEffect(() => {
     apiClient.get<DepartmentDto[]>('/api/departments').catch((e: Error) => {
@@ -115,8 +135,8 @@ export function AssetsAdminApp() {
   const openCreate = () => {
     setEditingId(null);
     setCreateForm({ ...emptyCreateForm, departmentId: typeof departmentId === 'number' ? departmentId : 0 });
-    setPoLookup(null);
-    setPoLookupError(null);
+    setSelectedPo(null);
+    setPoOptions([]);
     setFormError(null);
     setDialogOpen(true);
   };
@@ -128,23 +148,23 @@ export function AssetsAdminApp() {
     setDialogOpen(true);
   };
 
-  const lookupPo = async (purchaseOrderId: number) => {
-    if (!purchaseOrderId) {
-      setPoLookup(null);
-      setPoLookupError(null);
+  // Debounced — fires ~350ms after typing stops, not on every keystroke, so a
+  // fast typist doesn't queue up a request per character.
+  const searchPurchaseOrders = (search: string) => {
+    if (poSearchTimer.current) clearTimeout(poSearchTimer.current);
+    if (search.trim().length < 2) {
+      setPoOptions([]);
       return;
     }
-    setPoLookingUp(true);
-    setPoLookup(null);
-    setPoLookupError(null);
-    try {
-      const po = await apiClient.get<PurchaseOrderDto>(`/api/purchase-orders/${purchaseOrderId}`);
-      setPoLookup(po);
-    } catch (e) {
-      setPoLookupError((e as Error).message);
-    } finally {
-      setPoLookingUp(false);
-    }
+    poSearchTimer.current = setTimeout(() => {
+      setPoSearching(true);
+      const params = new URLSearchParams({ PoNumber: search.trim(), PageSize: '20' });
+      apiClient
+        .get<PagedResult<PurchaseOrderDto>>(`/api/purchase-orders/grid?${params.toString()}`)
+        .then((data) => setPoOptions(data.items))
+        .catch(() => setPoOptions([]))
+        .finally(() => setPoSearching(false));
+    }, 350);
   };
 
   const submitForm = async () => {
@@ -185,7 +205,7 @@ export function AssetsAdminApp() {
   };
 
   if (refDataError) return <Alert severity="error">{refDataError}</Alert>;
-  if (!departments) return <CircularProgress />;
+  if (!departments || !vendors) return <CircularProgress />;
 
   return (
     <Box>
@@ -315,30 +335,40 @@ export function AssetsAdminApp() {
       >
         {editingId === null && (
           <>
-            <TextField
-              type="number"
-              label="Purchase Order Id"
-              value={createForm.purchaseOrderId || ''}
-              onChange={(e) => {
-                const id = Number(e.target.value);
-                setCreateForm({ ...createForm, purchaseOrderId: id });
+            <Autocomplete
+              options={poOptions}
+              loading={poSearching}
+              value={selectedPo}
+              filterOptions={(x) => x}
+              getOptionLabel={(po) => poOptionLabel(po, vendorName)}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              onChange={(_e, value) => {
+                setSelectedPo(value);
+                setCreateForm({ ...createForm, purchaseOrderId: value?.id ?? 0 });
               }}
-              onBlur={() => lookupPo(createForm.purchaseOrderId)}
-              required
-              autoFocus
-              helperText="The purchase order this asset arrived under"
+              onInputChange={(_e, value, reason) => {
+                if (reason === 'input') searchPurchaseOrders(value);
+              }}
+              noOptionsText="Type at least 2 characters of a PO number"
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Purchase Order"
+                  required
+                  autoFocus
+                  helperText="Search by PO number — the purchase order this asset arrived under"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {poSearching && <CircularProgress size={16} />}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
             />
-            {poLookingUp && <CircularProgress size={20} />}
-            {poLookup && (
-              <Alert severity="success" sx={{ py: 0 }}>
-                {poLookup.poNumber} — qty {poLookup.quantity} — ${poLookup.totalCost.toFixed(2)}
-              </Alert>
-            )}
-            {poLookupError && (
-              <Alert severity="warning" sx={{ py: 0 }}>
-                {poLookupError}
-              </Alert>
-            )}
             <TextField
               label="Asset Tag"
               value={createForm.assetTag}

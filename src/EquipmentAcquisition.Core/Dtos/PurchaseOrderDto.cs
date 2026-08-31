@@ -12,8 +12,10 @@ public record UpdatePurchaseOrderDto(int VendorId, int Quantity, decimal UnitCos
 
 // All filters optional — same reasoning as AssetListQuery, not RequestListQuery:
 // PurchaseOrders has ~15k rows, no multi-join read model, no mandatory-triad index.
+// PoNumber is a "contains" search (not exact match) — backs the Asset Registry
+// page's live-search picker, where the user is typing a fragment, not a full id.
 public record PurchaseOrderListQuery(
-    int? VendorId = null, int? AcquisitionRequestId = null,
+    int? VendorId = null, int? AcquisitionRequestId = null, string? PoNumber = null,
     int PageNumber = 1, int PageSize = 25);
 
 // Backs the Create dialog's request picker — Approved requests with no PO yet.

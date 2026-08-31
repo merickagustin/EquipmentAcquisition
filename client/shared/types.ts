@@ -204,6 +204,7 @@ export interface UpdatePurchaseOrderDto {
 export interface PurchaseOrderListQuery {
   vendorId?: number;
   acquisitionRequestId?: number;
+  poNumber?: string;
   pageNumber?: number;
   pageSize?: number;
 }

@@ -24,6 +24,10 @@ client/
   requests-admin/              React+MUI app — AcquisitionRequest grid,
                                approve/reject, inline PurchaseOrder
                                management, its own bundle
+  assets-admin/                 React+MUI app — Asset paginated CRUD,
+                                inline PurchaseOrder lookup, its own bundle
+  reports-admin/                React+MUI app — Department Spend Report,
+                                read-only, its own bundle
 ```
 
 ## Backend layering: Application and Infrastructure are one project
@@ -92,25 +96,27 @@ its own `app.js` — just with the hardcoded parts replaced by data. It is
   - references that page's own bundle, mounted into `<div id="content-root">`
 - Clicking a menu item is a **normal navigation** to that page's URL
   (`/menu-admin`, `/vendors`, `/departments`, `/equipment-categories`,
-  `/requests`, later `/assets`, `/reports/department-spend`) — the browser
-  loads a new shell, which loads that page's own bundle. No client-side
-  router deciding what to render; the server decides which shell (and
-  therefore which bundle) to serve, same as the old `.aspx`-per-page setup.
+  `/requests`, `/assets`, `/reports/department-spend`) — the browser loads
+  a new shell, which loads that page's own bundle. No client-side router
+  deciding what to render; the server decides which shell (and therefore
+  which bundle) to serve, same as the old `.aspx`-per-page setup.
 - Each bundle is a fully independent React app — its own `ReactDOM.createRoot`
   call, its own state. They share nothing at runtime except the DOM they're
   both mounted into (nav in one div, page content in another) and,
   independently, the MUI theme module they both import from `client/shared`.
 
-Six bundles exist today: `nav` (the dynamic menu itself), `menu-admin`
-(MenuItem CRUD), `vendors-admin` / `departments-admin` /
-`equipment-categories-admin` (reference-data CRUD, same list+dialog shape
-as `menu-admin` minus the tree), and `requests-admin` (a paginated,
-filtered grid over `AcquisitionRequest` with an approve/reject workflow
-and inline `PurchaseOrder` management — see "Acquisition Requests: a
-second shape" below). Asset Registry and the department-spend report
-would each get their own bundle later, following the same pattern —
-nothing about the architecture is specific to any one entity, that's just
-what hasn't been built yet.
+Eight bundles exist today, one per sidebar entry: `nav` (the dynamic menu
+itself), `menu-admin` (MenuItem CRUD), `vendors-admin` /
+`departments-admin` / `equipment-categories-admin` (reference-data CRUD,
+same list+dialog shape as `menu-admin` minus the tree), `requests-admin`
+(a paginated, filtered grid over `AcquisitionRequest` with an
+approve/reject workflow and inline `PurchaseOrder` management — see
+"Acquisition Requests: a second shape" below), `assets-admin` (paginated
+CRUD over `Asset`, with an inline Purchase-Order-id lookup instead of a
+picker), and `reports-admin` (the read-only Department Spend Report — no
+CRUD, no `FormDialog`, just filters and a table). Purchase Orders is the
+one sidebar entry with no bundle of its own, deliberately — see
+"Acquisition Requests: a second shape" for why.
 
 ## Build: Webpack, multiple entries
 
@@ -125,9 +131,10 @@ module.exports = {
     nav: './nav/index.tsx',
     'menu-admin': './menu-admin/index.tsx',
     // 'vendors-admin', 'departments-admin', 'equipment-categories-admin',
-    // 'requests-admin' follow the same one-entry-per-page pattern. Named
-    // *-admin, not e.g. 'vendors' — an entry named 'vendors' would collide
-    // with the splitChunks cacheGroup below, which already emits vendors/app.js.
+    // 'requests-admin', 'assets-admin', 'reports-admin' follow the same
+    // one-entry-per-page pattern. Named *-admin, not e.g. 'vendors' — an
+    // entry named 'vendors' would collide with the splitChunks cacheGroup
+    // below, which already emits vendors/app.js.
   },
   output: {
     filename: '[name]/app.js',
@@ -310,12 +317,14 @@ client/shared/
 tree-building is used by `nav` and `menu-admin` specifically (the
 reference-data and requests pages are flat lists, no tree to build).
 `FormDialog` and `ConfirmDialog`, originally written for `menu-admin`
-alone with no second consumer yet, are now used by every admin bundle —
-`vendors-admin`, `departments-admin`, `equipment-categories-admin`, and
-`requests-admin` (five separate forms: create/edit request, approve,
-reject, and the purchase-order dialog) all render the same two
-components. Nothing in `FormDialog.tsx` or `ConfirmDialog.tsx` changed to
-make that possible — the contract held.
+alone with no second consumer yet, are now used by every CRUD bundle —
+`vendors-admin`, `departments-admin`, `equipment-categories-admin`,
+`assets-admin`, and `requests-admin` (five separate forms in that one
+bundle alone: create/edit request, approve, reject, and the
+purchase-order dialog) all render the same two components. `reports-admin`
+is the one exception — read-only, no form, no dialog, nothing to plug in.
+Nothing in `FormDialog.tsx` or `ConfirmDialog.tsx` changed to make any of
+this possible — the contract held.
 
 **`FormDialog` standardises three things**, and the third is the one that
 usually gets missed:

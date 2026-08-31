@@ -63,9 +63,21 @@ row grows a shopping-cart action to create/edit/remove the linked Purchase
 Order. There's no separate Purchase Orders page — a PO is a 1:0-or-1
 extension of an Approved request (unique FK), not a flat list of ~15k rows
 with no natural entry point, so managing it is a per-row action here
-instead. The rest of the sidebar's routes (Asset Registry, Department
-Spend) don't have pages yet, so those menu entries stay inactive rather
-than linking to a 404.
+instead. Deleting a request is a **soft** delete (`IsDeleted`, on both the
+request and its cache row) — it disappears from every view exactly like a
+real delete, but the row and its audit history survive.
+
+**Asset Registry** (`/assets`, under `Assets`) is a paginated CRUD list —
+optional Department/Status filters, and creating one asks for a Purchase
+Order id with an inline lookup (vendor/PO number/total shown before you
+commit) rather than a picker, since Assets has no equivalent read-optimized
+cache and browsing ~45k rows unfiltered isn't the point.
+
+**Department Spend Report** (`/reports/department-spend`, under `Reports`)
+is the read-only frontend for the actual centerpiece deliverable — the
+measured naive-vs-optimized stored procedure (see `table-design.md`).
+Filter by date range and an optional department; the table sorts by spend
+descending with a grand-total footer row.
 
 The background-service pattern behind that grid (`CacheRefreshQueue` +
 `DetailCacheRefreshWorker` polling it on a timer) isn't inherently tied to

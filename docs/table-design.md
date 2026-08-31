@@ -82,6 +82,7 @@ separate decision this project doesn't need to make.
 | RejectedDate | datetime | nullable |
 | ApprovedByEmployeeId | int FK, nullable | → Employee, set only once Status is Approved |
 | RejectionReason | varchar | nullable |
+| IsDeleted | bit, default 0 | soft delete — see below |
 
 **Status is not a column.** It's derived: `RejectedDate` set → Rejected;
 `ApprovedDate` set → Approved; else Pending. The two date columns are treated
@@ -91,6 +92,27 @@ doesn't later get an ApprovedDate).
 **Index:** `(DepartmentId, EquipmentCategoryId, RequestDate)` — composite,
 covers the report's grouping/filtering. The naive version of the report
 deliberately runs before this index is added, so the before/after is real.
+
+**Delete is soft, not physical.** `AcquisitionRequestService.DeleteAsync`
+sets `IsDeleted = true` and saves — it no longer removes the row. A request
+is business history the moment it exists (it may already carry an
+Approve/Reject decision, and always carries an audit trail), so a delete
+retiring it from view is the right default; physically erasing that history
+isn't. `AcquisitionRequestRepository.GetAllAsync`/`GetByIdAsync` filter
+`!IsDeleted`, so every normal caller — list, view, edit, approve, reject,
+create-a-PO-against-it — sees a soft-deleted request exactly as "gone" as
+the old hard-delete behavior. The `HasPurchaseOrderAsync` guard (can't
+delete a request that already has a PO) is unchanged; it just now blocks a
+flag flip instead of a row removal.
+
+`EquipmentAcquisitionDetailCache` carries the same `IsDeleted` column,
+mirrored by the refresh path — a soft-deleted request is still
+re-materialized into the cache (not omitted), and
+`DetailCacheRepository.GetPagedAsync` filters `!IsDeleted` unconditionally,
+before the mandatory Department/Status/date triad. That split — refresh
+mirrors the flag, the repository enforces it — keeps the refresh procs
+simple (no "should I even insert this row?" branching) and keeps the
+"what's visible" decision in exactly one place.
 
 ## PurchaseOrder
 | Column | Type | Notes |
@@ -173,6 +195,7 @@ approver), `PurchaseOrder` and `Vendor`.
 | TotalCost | decimal(18,2) | nullable |
 | OrderDate | datetime | nullable |
 | RefreshedAt | datetime | when this row was last rebuilt — staleness is visible, not guessed |
+| IsDeleted | bit | mirrors AcquisitionRequest.IsDeleted — see that section's "Delete is soft" note |
 
 **Everything downstream of PurchaseOrder is nullable, and that's not
 optional.** `PurchaseOrder` is 1:1 with `AcquisitionRequest` but *optional* —
@@ -232,7 +255,8 @@ to matter once real seeded data exists.
 ```sql
 SELECT ...
 FROM dbo.EquipmentAcquisitionDetailCache
-WHERE DepartmentId = @DepartmentId AND Status = @Status AND RequestDate BETWEEN @From AND @To
+WHERE IsDeleted = 0   -- unconditional, not one of the optional filters — no toggle to see past it
+  AND DepartmentId = @DepartmentId AND Status = @Status AND RequestDate BETWEEN @From AND @To
   -- optional filters (category/vendor/requester/approver) appended only when actually supplied —
   -- never as `(@Param IS NULL OR Col = @Param)`, which defeats every index above regardless of
   -- whether the param is actually null at runtime

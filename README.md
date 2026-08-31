@@ -17,6 +17,22 @@ approach could slot into an existing enterprise web architecture
 incrementally — a page at a time — rather than a proposal to replace
 its frontend entirely.
 
+## Tech stack
+
+| Layer | Stack |
+|---|---|
+| Backend | .NET 8, ASP.NET Core Web API, EF Core 8 (SQL Server provider), Swashbuckle/Swagger |
+| Database | SQL Server 2022, runs in Docker — no local install needed |
+| Frontend | React 18, TypeScript, Material UI 5 (pinned — see `architecture.md`), Webpack 5 |
+| Seeding | Bogus (fake data), `SqlBulkCopy` for the three high-volume tables |
+| Testing | xUnit + Moq (backend, 33 tests), Playwright (real headless-browser E2E) |
+| DevOps | Docker Compose (3 services), Git/GitHub |
+
+Nine independent React bundles (`nav`, `menu-admin`, `vendors-admin`,
+`departments-admin`, `equipment-categories-admin`, `requests-admin`,
+`assets-admin`, `reports-admin`, `purchase-orders-admin`) — one per
+sidebar page, not a single SPA. See `architecture.md` for why.
+
 ## Docker (recommended)
 
 One command brings up the whole stack — SQL Server, the API, and the Web

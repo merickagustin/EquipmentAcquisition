@@ -8,6 +8,15 @@ lives in [`docs/`](docs/), starting with
 [`docs/architecture.md`](docs/architecture.md) and
 [`docs/table-design.md`](docs/table-design.md).
 
+## Scope
+
+This is a demo to showcase a measured SQL Server optimization and a
+sample architecture for running a background service, not a
+production-ready product. The React bundle is a sample of how the
+approach could slot into an existing enterprise web architecture
+incrementally — a page at a time — rather than a proposal to replace
+its frontend entirely.
+
 ## Docker (recommended)
 
 One command brings up the whole stack — SQL Server, the API, and the Web

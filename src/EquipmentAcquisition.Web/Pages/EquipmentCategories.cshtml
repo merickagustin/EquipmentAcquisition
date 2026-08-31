@@ -1,0 +1,11 @@
+@page "/equipment-categories"
+@model EquipmentAcquisition.Web.Pages.EquipmentCategoriesModel
+@{
+    ViewData["Title"] = "Equipment Categories";
+}
+
+@* content-root is filled by the equipment-categories-admin React bundle — nothing server-rendered here. *@
+
+@section Scripts {
+    <script src="~/dist/equipment-categories-admin/app.js"></script>
+}

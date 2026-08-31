@@ -7,7 +7,7 @@ public record RequestDetailDto(
     decimal? TotalCost, DateTime RefreshedAt);
 
 public record RequestListQuery(
-    int DepartmentId, byte Status, DateTime From, DateTime To,
+    int? DepartmentId, byte? Status, DateTime? From, DateTime? To,
     int? EquipmentCategoryId = null, int? VendorId = null,
     int? RequestedByEmployeeId = null, int? ApprovedByEmployeeId = null,
     int PageNumber = 1, int PageSize = 50,

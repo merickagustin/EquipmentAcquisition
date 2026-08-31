@@ -1,5 +1,6 @@
 using EquipmentAcquisition.Core.Data;
 using EquipmentAcquisition.Core.Dtos;
+using EquipmentAcquisition.Core.Exceptions;
 using EquipmentAcquisition.Core.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using CacheEntity = EquipmentAcquisition.Domain.Entities.EquipmentAcquisitionDetailCache;
@@ -17,6 +18,9 @@ public class DetailCacheRepository : IDetailCacheRepository
 
     public async Task<PagedResult<RequestDetailDto>> GetPagedAsync(RequestListQuery query)
     {
+        if (query.DepartmentId is null || query.Status is null || query.From is null || query.To is null)
+            throw new ValidationException("DepartmentId, Status, From, and To are all required.");
+
         // Mandatory triad first — Department/Status/Date are never null, matching the
         // (DepartmentId, Status, RequestDate) index. Optional filters appended only when
         // actually supplied — never a catch-all `(@Param IS NULL OR Col = @Param)`, which

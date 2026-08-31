@@ -22,9 +22,12 @@ app.UseStaticFiles();
 // --watch) is picked up instantly with no copy step. In Production/Docker,
 // the Dockerfile places the built bundles into wwwroot/dist instead, and the
 // UseStaticFiles() call above already serves that. See architecture.md.
-if (app.Environment.IsDevelopment())
+// The directory check (not just IsDevelopment()) matters because the Docker
+// image also runs ASPNETCORE_ENVIRONMENT=Development but has no repo checkout
+// alongside it — only a real local `dotnet run` has client/dist at this path.
+var clientDistPath = Path.Combine(app.Environment.ContentRootPath, "..", "..", "client", "dist");
+if (app.Environment.IsDevelopment() && Directory.Exists(clientDistPath))
 {
-    var clientDistPath = Path.Combine(app.Environment.ContentRootPath, "..", "..", "client", "dist");
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(Path.GetFullPath(clientDistPath)),

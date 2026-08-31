@@ -1,0 +1,11 @@
+@page "/departments"
+@model EquipmentAcquisition.Web.Pages.DepartmentsModel
+@{
+    ViewData["Title"] = "Departments";
+}
+
+@* content-root is filled by the departments-admin React bundle — nothing server-rendered here. *@
+
+@section Scripts {
+    <script src="~/dist/departments-admin/app.js"></script>
+}

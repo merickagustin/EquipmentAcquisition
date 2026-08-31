@@ -46,9 +46,15 @@ docker compose run api dotnet EquipmentAcquisition.Api.dll --seed
 ```
 
 Then visit **http://localhost:8090/menu-admin** for the full CRUD demo —
-sidebar tree on the left (only `Home` and `Administration → Menu Admin`
-show, since everything else in the seed is inactive), indented table on
-the right. Toggling `IsActive` on a row updates the sidebar live.
+sidebar tree on the left, indented table on the right. Toggling `IsActive`
+on a row updates the sidebar live. The same list/dialog CRUD pattern (built
+on the shared `FormDialog` template) also powers three reference-data
+admin pages, all reachable from the sidebar under `Administration`:
+**Vendors** (`/vendors`), **Departments** (`/departments`), and
+**Equipment Categories** (`/equipment-categories`). The rest of the
+sidebar's routes (Requests, Purchase Orders, Asset Registry, Department
+Spend) don't have pages yet, so their menu entries stay inactive rather
+than linking to a 404.
 
 **Resetting to a clean slate:**
 

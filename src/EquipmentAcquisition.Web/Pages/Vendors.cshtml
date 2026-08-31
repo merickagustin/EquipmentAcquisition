@@ -1,0 +1,11 @@
+@page "/vendors"
+@model EquipmentAcquisition.Web.Pages.VendorsModel
+@{
+    ViewData["Title"] = "Vendors";
+}
+
+@* content-root is filled by the vendors-admin React bundle — nothing server-rendered here. *@
+
+@section Scripts {
+    <script src="~/dist/vendors-admin/app.js"></script>
+}

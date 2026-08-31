@@ -47,8 +47,12 @@ export function flattenWithDepth(tree: MenuTreeNode[], depth = 0): FlatWithDepth
 // A `nav` rule, not a database one — a node renders only if it AND every
 // ancestor is active, so deactivating a group hides its children too instead
 // of leaving them floating at top level. See table-design.md's MenuItem notes.
+// A group (route === null) that's active but ends up with no active children
+// after filtering is dropped too — an empty header with nothing under it is
+// dead UI, not a useful "coming soon" signal.
 export function filterActiveWithActiveAncestors(tree: MenuTreeNode[]): MenuTreeNode[] {
   return tree
     .filter((node) => node.isActive)
-    .map((node) => ({ ...node, children: filterActiveWithActiveAncestors(node.children) }));
+    .map((node) => ({ ...node, children: filterActiveWithActiveAncestors(node.children) }))
+    .filter((node) => node.route !== null || node.children.length > 0);
 }

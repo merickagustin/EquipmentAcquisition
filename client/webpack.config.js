@@ -4,6 +4,11 @@ module.exports = {
   entry: {
     nav: './nav/index.tsx',
     'menu-admin': './menu-admin/index.tsx',
+    // Named *-admin, not e.g. 'vendors' — an entry named 'vendors' would collide
+    // with the splitChunks cacheGroup below, which already outputs to vendors/app.js.
+    'vendors-admin': './vendors-admin/index.tsx',
+    'departments-admin': './departments-admin/index.tsx',
+    'equipment-categories-admin': './equipment-categories-admin/index.tsx',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

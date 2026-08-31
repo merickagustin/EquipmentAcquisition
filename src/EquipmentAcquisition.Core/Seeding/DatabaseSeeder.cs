@@ -139,10 +139,10 @@ public class DatabaseSeeder
         return employees;
     }
 
-    // Hand-authored, not Bogus — twelve rows, two levels deep. See table-design.md's
-    // "Seed — five top-level menus." Most start inactive: /menu-admin is the only route
-    // with a shell page in this scope, so seeding the rest active would hand a reviewer
-    // a menu where nine of twelve links 404.
+    // Hand-authored, not Bogus — thirteen rows, two levels deep. See table-design.md's
+    // "Seed — five top-level menus." Active only where a shell page actually exists
+    // (Home, Menu Admin, Vendors, Departments, Equipment Categories) — the rest stay
+    // inactive so a reviewer never lands on a 404 from the nav.
     private async Task<int> SeedMenuItemsAsync()
     {
         var home = new MenuItem { Label = "Home", Route = "/", DisplayOrder = 1, IsActive = true };
@@ -162,8 +162,9 @@ public class DatabaseSeeder
             new MenuItem { ParentId = assets.Id, Label = "Asset Registry", Route = "/assets", DisplayOrder = 1, IsActive = false },
             new MenuItem { ParentId = reports.Id, Label = "Department Spend", Route = "/reports/department-spend", DisplayOrder = 1, IsActive = false },
             new MenuItem { ParentId = administration.Id, Label = "Menu Admin", Route = "/menu-admin", DisplayOrder = 1, IsActive = true },
-            new MenuItem { ParentId = administration.Id, Label = "Vendors", Route = "/vendors", DisplayOrder = 2, IsActive = false },
-            new MenuItem { ParentId = administration.Id, Label = "Departments", Route = "/departments", DisplayOrder = 3, IsActive = false },
+            new MenuItem { ParentId = administration.Id, Label = "Vendors", Route = "/vendors", DisplayOrder = 2, IsActive = true },
+            new MenuItem { ParentId = administration.Id, Label = "Departments", Route = "/departments", DisplayOrder = 3, IsActive = true },
+            new MenuItem { ParentId = administration.Id, Label = "Equipment Categories", Route = "/equipment-categories", DisplayOrder = 4, IsActive = true },
         };
         _context.MenuItems.AddRange(children);
         await _context.SaveChangesAsync();

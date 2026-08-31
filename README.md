@@ -122,10 +122,35 @@ The background-service pattern behind that grid (`CacheRefreshQueue` +
 display — it's a general staging queue for "something needs to happen
 asynchronously, after this write." Today the only consumer refreshes a
 read cache, but the same shape (enqueue on write, drain on a timer) is a
-natural fit for staging outbound notifications too — e.g. alerting a
-department head when a request needs approval, or flagging one that
-crosses a budget threshold — for both the Acquisition Request display and
-future reports, not just the cache table.
+natural fit for staging outbound notifications too, and the concrete path
+to that is short:
+
+- **Enqueue at the exact same write points that already enqueue today.**
+  `AcquisitionRequestService.ApproveAsync`/`RejectAsync`/`CreateAsync` and
+  `PurchaseOrderService.CreateAsync` already call `EnqueueForRequestAsync`
+  right where the event happens — a request needing approval, one crossing
+  a budget threshold, a PO placed. A `NotificationQueue` table (same
+  id-only shape as `CacheRefreshQueue`: an `Id`, the affected request id,
+  and something identifying *why* — `NotificationType`) would be written
+  from those exact same call sites, not from new event-detection logic.
+- **A second worker, same shape as `DetailCacheRefreshWorker`.** Another
+  `BackgroundService` on its own `PeriodicTimer`, draining
+  `NotificationQueue` instead of `CacheRefreshQueue` — same
+  drain-a-batch-then-commit structure, just calling an email/webhook/Slack
+  sender per row instead of running a rebuild stored proc.
+- **The one real behavioral difference: failure handling.** A refresh
+  that fails just gets picked up again next cycle with no side effect —
+  idempotent by construction, since it's a full rebuild of that row, not
+  a delta. A notification isn't idempotent the same way (you don't want a
+  department head emailed twice for one approval), so the row would need
+  to be deleted only *after* a confirmed send, with a retry/backoff for a
+  failed one rather than deleting unconditionally the way the cache
+  refresh does today.
+
+Same underlying idea either way: the queue is the audit-friendly,
+decoupled "something changed, act on it later" primitive, and cache
+refresh and notification delivery are just two different things to do
+once a row is dequeued.
 
 **Resetting to a clean slate:**
 
